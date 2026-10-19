@@ -1,0 +1,50 @@
+##
+# Host Database
+#
+# localhost is used to configure the loopback interface
+# when the system is booting.  Do not change this entry.
+##
+127.0.0.1	localhost
+255.255.255.255	broadcasthost
+::1             localhost
+# Added by Docker Desktop
+# To allow the same kube context to work on the host and the container:
+127.0.0.1 kubernetes.docker.internal
+# End of section
+
+
+
+
+
+# --- SWITCHHOSTS_CONTENT_START ---
+
+# file: kvs
+127.0.0.1 offer.vip4k.com.local, admin.vip4k.com.local
+127.0.0.1 black4k.com.local, old4k.com.local, loan4k.com.local
+127.0.0.1 daddy4k.com.local, hunt4k.com.local, myteenpass.com.local 
+127.0.0.1 ex-gf.porn.local, debt4k.com.local
+127.0.0.1 law4k.com.local, sis.porn.local, rim4k.com.local
+127.0.0.1 tutor4k.com.local, fist4k.com.local, stuck4k.com.local
+127.0.0.1 mature4k.com.local, shame4k.com.local, cuck4k.com.local
+127.0.0.1 bride4k.com.local, welcome4k.com.local, ignore4k.com.local
+127.0.0.1 mommy4k.com.local, serve4k.com.local, swap4k.com.local, members.vip4k.com.local
+127.0.0.1 pie4k.com.local, dyke4k.com.local
+127.0.0.1 vip4k.com.local, pinhole.xxx.local, pinhole.com.local, bufu.xxx.local
+
+127.0.0.1 devtest.vip4k.com.local, devtest.pinhole.xxx.local, devtest.pinhole.com.local, devtest.bufu.xxx.local
+127.0.0.1 devtest.tutor4k.com.local, devtest.fist4k.com.local, devtest.stuck4k.com.local
+127.0.0.1 offer.devtest.vip4k.com.local, admin.devtest.vip4k.com.local
+127.0.0.1 devtest.mommy4k.com.local, devtest.serve4k.com.local, devtest.swap4k.com.local, members.devtest.vip4k.com.local
+
+
+# file: ContentManager
+127.0.0.1 yii2basic.test
+
+
+# traefik
+
+
+213.174.151.224 admin.vip4k.com
+127.0.0.1 noir4k.com.local
+127.0.0.1 portainer.test
+127.0.0.1 beszel.test netdata.test
