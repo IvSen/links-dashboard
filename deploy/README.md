@@ -15,7 +15,9 @@
 | `/home/ivan/build/edge-proxy/nginx.conf` | конфиг edge-proxy; в контейнер монтируется только на чтение как `/config/edge-nginx.conf` |
 | `/home/ivan/build/edge-proxy/nginx.conf.bak-links` | копия конфига до добавления `links.test` |
 
-Контейнер работает с `network_mode: host`, слушает только `127.0.0.1:8099`, монтирует `/var/run/docker.sock` на чтение.
+Контейнер работает с `network_mode: host`, слушает только `127.0.0.1:8099`, монтирует `/var/run/docker.sock`.
+Флаг `:ro` у сокета не делает Docker API доступным только на чтение: через сокет можно делать с Docker что угодно, то есть
+контейнер фактически имеет root на ноутбуке. Только чтение обеспечивает код приложения, а не монтирование.
 Процесс внутри контейнера идет от root: `ssh` требует, чтобы у uid была запись в `/etc/passwd`, а у root она есть; к тому же сокет Docker и ключ в `/data`
 доступны ему без смены прав. Приложение ничего не меняет ни на Маке, ни на ноутбуке, кроме `state.json`.
 
@@ -75,12 +77,13 @@ kubectl config view --minify --flatten --context kind-rosfines-dev \
    command="/Users/i.senishin/bin/links-dashboard-mac-info",restrict <содержимое mac_key.pub>
    ```
 
-   Публичный ключ взять так, строку собрать и дописать:
+   Публичный ключ взять так, строку собрать и дописать (перевод строки в начале нужен, чтобы новая строка не склеилась
+   с последней, если в файле нет завершающего `\n`; пустая строка в `authorized_keys` допустима):
 
    ```bash
    PUB="$(ssh winbox cat /home/ivan/.config/links-dashboard/mac_key.pub)"
    mkdir -p ~/.ssh && chmod 700 ~/.ssh
-   printf 'command="/Users/i.senishin/bin/links-dashboard-mac-info",restrict %s\n' "$PUB" >> ~/.ssh/authorized_keys
+   printf '\ncommand="/Users/i.senishin/bin/links-dashboard-mac-info",restrict %s\n' "$PUB" >> ~/.ssh/authorized_keys
    chmod 600 ~/.ssh/authorized_keys
    ```
 
@@ -116,4 +119,4 @@ docker logs links-dashboard --tail 50
 ssh winbox 'curl -s -H "Host: links.test" http://127.0.0.1:8099/api/snapshot' | python3 -m json.tool | tail -20
 ```
 
-`failed_sources` в ответе называет источник, который не ответил: `mac`, `docker`, `cluster` или `edge`.
+`failed_sources` в ответе называет источник, который не ответил: `mac`, `docker`, `cluster`, `edge` или `laptop`.

@@ -24,7 +24,7 @@ HOST = {"Host": "links.test"}
 KVS = {"g": "cd_traffic", "sg": "kvs"}
 VIP = "web:https://vip4k.com.local"
 BABYLON = "babylon.local.rf-tech.ru"
-MINIO_CONSOLE = "web:http://localhost:19001"
+MINIO_CONSOLE = "container:mp4kv2-panel-minio:9001/tcp"
 KVS_DIR = "/Users/i.senishin/project/cd_traffic/kvs"
 
 
@@ -148,7 +148,7 @@ def test_mac_down_uses_cached_hosts(client, world):
     assert body["health"]["tiles"][0]["value"] == "Мак недоступен"
     item = _item(_group(client, KVS), VIP)
     assert item["cached"] is True
-    assert _item(_group(client, KVS), "conn:mysql:127.0.0.1:3310")["key"]
+    assert _item(_group(client, KVS), "container:kvs-mysql:3306/tcp")["key"]
 
 
 def test_cluster_down_keeps_items(client, world):
@@ -183,7 +183,7 @@ def test_patch_moves_group_and_hides(client):
 
 def test_missing_item_with_override_is_kept(client, world):
     _refresh(client)
-    response = client.patch(f"/api/items/{MINIO_CONSOLE}", json={"title": "Консоль MinIO"})
+    response = client.patch(f"/api/items/{quote(MINIO_CONSOLE, safe='')}", json={"title": "Консоль MinIO"})
     assert response.status_code == 200
     world.containers = [item for item in world.containers if item.name != "mp4kv2-panel-minio"]
     _refresh(client)
@@ -203,7 +203,7 @@ def test_foreign_host_rejected(client):
 def test_default_description_and_project_header(client):
     _refresh(client)
     tools = _group(client, {"g": "tools"})
-    assert _item(tools, "web:https://localhost:9443")["description"] == "Контейнеры и кластер в вебе"
+    assert _item(tools, "container:portainer:9443/tcp")["description"] == "Контейнеры и кластер в вебе"
     kvs = _group(client, KVS)
     assert kvs["project"]["branch"] == "main"
     assert kvs["project"]["total"] == 4

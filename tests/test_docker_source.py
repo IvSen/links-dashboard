@@ -126,3 +126,31 @@ def test_project_of():
     assert project_of("/home/ivan/build/edge-proxy/sub") == ("tools", None)
     assert project_of("/tmp/x") is None
     assert project_of(None) is None
+
+
+def test_stopped_container_ports_come_from_bindings():
+    attrs = {
+        "Name": "/x",
+        "Config": {"Image": "img", "Env": [], "Labels": {}},
+        "State": {"Running": False, "StartedAt": "0001-01-01T00:00:00Z"},
+        "HostConfig": {
+            "PortBindings": {
+                "3306/tcp": [{"HostIp": "", "HostPort": "3310"}, {"HostIp": "", "HostPort": "3310"}],
+                "9000/tcp": [{"HostIp": "", "HostPort": ""}],
+                "80/tcp": None,
+            }
+        },
+        "NetworkSettings": {"Ports": {}},
+    }
+    assert from_inspect(attrs).ports == [("", 3310, 3306, "tcp")]
+
+
+def test_running_container_ignores_bindings():
+    attrs = {
+        "Name": "/x",
+        "Config": {"Image": "img", "Env": [], "Labels": {}},
+        "State": {"Running": True, "StartedAt": "2026-01-01T00:00:00Z"},
+        "HostConfig": {"PortBindings": {"3306/tcp": [{"HostIp": "", "HostPort": ""}]}},
+        "NetworkSettings": {"Ports": {"3306/tcp": [{"HostIp": "0.0.0.0", "HostPort": "32768"}]}},
+    }
+    assert from_inspect(attrs).ports == [("0.0.0.0", 32768, 3306, "tcp")]

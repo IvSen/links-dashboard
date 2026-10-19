@@ -20,10 +20,10 @@ CONN_PORTS = {
 }
 TLS_PORTS = frozenset({443, 8443, 9443})
 DEFAULT_DESCRIPTIONS = {
-    "web:https://localhost:9443": "Контейнеры и кластер в вебе",
+    "container:portainer:9443/tcp": "Контейнеры и кластер в вебе",
     "web:http://beszel.test": "Нагрузка ноутбука и история",
     "web:http://netdata.test": "Подробные метрики по секундам",
-    "web:http://localhost:19001": "Веб-консоль MinIO (mp4k_v2)",
+    "container:mp4kv2-panel-minio:9001/tcp": "Веб-консоль MinIO (mp4k_v2)",
 }
 
 

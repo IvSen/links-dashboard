@@ -114,3 +114,24 @@ def test_laptop_tile_healthy_sub_from_facts():
 def test_laptop_tile_vpn_off_is_bad():
     laptop = LaptopInfo(vpn=False, docker_version="29.9.1", kind_running=True)
     assert build_health(MacInfo(), None, CONTAINER, EDGE, laptop, {}).tiles[3].bad is True
+
+
+def test_sync_error_marks_tile_without_data():
+    mac = MacInfo(sync=[], forwards=[forward()], errors={"sync": "unable to connect to daemon"})
+    health = build_health(mac, None, CONTAINER, EDGE, LAPTOP, {})
+    tile = health.tiles[0]
+    assert tile.bad is True
+    assert tile.value == "нет данных"
+    assert tile.sub == "unable to connect to daemon"
+    assert health.tiles[1].bad is False
+
+
+def test_forward_error_marks_tile_without_data():
+    mac = MacInfo(sync=[session()], forwards=[], errors={"forward": "daemon not running"})
+    health = build_health(mac, None, CONTAINER, EDGE, LAPTOP, {})
+    tile = health.tiles[1]
+    assert tile.bad is True
+    assert tile.value == "нет данных"
+    assert tile.sub == "daemon not running"
+    assert health.tiles[0].bad is False
+    assert health.errors["forward"] == "daemon not running"

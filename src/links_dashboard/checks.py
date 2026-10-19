@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Literal
 
 import httpx
@@ -7,6 +8,8 @@ from links_dashboard.models import CheckTarget
 
 Status = Literal["up", "down", "na"]
 SERVER_ERROR_FLOOR = 500
+
+logger = logging.getLogger(__name__)
 
 
 async def check(target: CheckTarget, timeout: float = 3.0) -> Status:
@@ -59,6 +62,7 @@ async def check_many(targets: dict[str, CheckTarget], limit: int = 20) -> dict[s
             try:
                 return await check(target)
             except Exception:
+                logger.warning("check of %s:%s failed unexpectedly", target.host, target.port, exc_info=True)
                 return "down"
 
     results = await asyncio.gather(*(run(target) for target in targets.values()))

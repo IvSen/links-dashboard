@@ -65,3 +65,22 @@ def test_kind_not_running(tmp_path):
 def test_docker_failure_gives_none(tmp_path):
     info = read_laptop(FakeClient(fail=True), route_file(tmp_path, VPN))
     assert info == LaptopInfo(vpn=True, docker_version=None, kind_running=False)
+
+
+def test_docker_failure_is_logged(tmp_path, caplog):
+    with caplog.at_level("WARNING", logger="links_dashboard.laptop_source"):
+        read_laptop(FakeClient(fail=True), route_file(tmp_path, DEFAULT))
+    assert any(r.levelname == "WARNING" and r.exc_info for r in caplog.records)
+
+
+def test_kind_listing_failure_is_logged(tmp_path, caplog):
+    client = FakeClient()
+
+    def broken_list(**kwargs):
+        raise RuntimeError("socket gone")
+
+    client.containers.list = broken_list
+    with caplog.at_level("WARNING", logger="links_dashboard.laptop_source"):
+        info = read_laptop(client, route_file(tmp_path, DEFAULT))
+    assert info.kind_running is False
+    assert any("kind" in r.getMessage() and r.exc_info for r in caplog.records)

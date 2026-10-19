@@ -37,7 +37,8 @@ def _run(argv):
     return subprocess.run(
         argv,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=COMMAND_TIMEOUT,
         env=_env(),
         check=False,
@@ -108,8 +109,34 @@ def build_payload():
     }
 
 
+def _describe(error):
+    return _clip("%s: %s" % (type(error).__name__, error))
+
+
+def fallback_payload(error):
+    """Payload for an unexpected failure; omits "hosts" if even they cannot be read."""
+    message = "unexpected " + _describe(error)
+    errors = {"script": message, "sync": message, "forward": message}
+    try:
+        hosts = {"hosts": read_hosts()}
+    except Exception as hosts_error:
+        hosts, errors = {}, dict(errors, hosts=_describe(hosts_error))
+    return dict(
+        hosts,
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        sync=None,
+        forward=None,
+        branches={},
+        errors=errors,
+    )
+
+
 def main():
-    sys.stdout.write(json.dumps(build_payload()))
+    try:
+        payload = build_payload()
+    except Exception as error:
+        payload = fallback_payload(error)
+    sys.stdout.write(json.dumps(payload))
     sys.stdout.write("\n")
     return 0
 

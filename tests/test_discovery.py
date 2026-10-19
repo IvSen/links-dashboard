@@ -13,6 +13,9 @@ from links_dashboard.parsers import Forward, parse_edge_conf, parse_forwards, pa
 FIXTURES = Path(__file__).parent / "fixtures"
 KVS_DIR = "/Users/i.senishin/project/cd_traffic/kvs"
 BABYLON = "babylon.local.rf-tech.ru"
+KVS_MYSQL = "container:kvs-mysql:3306/tcp"
+MINIO_CONSOLE = "container:mp4kv2-panel-minio:9001/tcp"
+PORTAINER = "container:portainer:9443/tcp"
 
 
 @pytest.fixture(scope="module")
@@ -84,7 +87,7 @@ def test_ingress_goes_to_rosfines(endpoints):
 
 
 def test_kvs_mysql_is_connection(endpoints):
-    item = endpoints["conn:mysql:127.0.0.1:3310"]
+    item = endpoints[KVS_MYSQL]
     assert item.kind == "conn"
     assert item.url is None
     assert "user db" in item.label
@@ -96,34 +99,36 @@ def test_kvs_mysql_is_connection(endpoints):
 
 
 def test_minio_console_is_web_and_api_is_conn(endpoints):
-    console = endpoints["web:http://localhost:19001"]
+    console = endpoints[MINIO_CONSOLE]
     assert console.kind == "web"
+    assert console.url == "http://localhost:19001"
+    assert console.label == "localhost:19001"
     assert (console.group, console.subgroup) == ("cd_traffic", "mp4k_v2")
     assert (console.check.mode, console.check.port) == ("http", 19001)
-    api = endpoints["conn:minio-api:127.0.0.1:19000"]
+    api = endpoints["container:mp4kv2-panel-minio:9000/tcp"]
     assert api.kind == "conn"
 
 
 def test_portainer_is_https(endpoints):
-    item = endpoints["web:https://localhost:9443"]
+    item = endpoints[PORTAINER]
     assert (item.group, item.subgroup) == ("tools", None)
     assert item.url == "https://localhost:9443"
     assert item.check.mode == "https_sni"
     assert item.check.port == 9443
     assert item.check.server_name is None
-    assert "web:http://localhost:9443" not in endpoints
+    assert not [key for key in endpoints if key.startswith("web:") and "localhost" in key]
 
 
 def test_unforwarded_port_is_grey(hosts, containers, ingresses, edge, forwards):
     without_console = [item for item in forwards if item.name != "mp4k-minio-console"]
     built = build_endpoints(hosts, containers, ingresses, edge, without_console)
     by_key = {item.key: item for item in built}
-    item = by_key["unreachable:mp4kv2-panel-minio:9001"]
+    item = by_key[MINIO_CONSOLE]
     assert item.reachable_from_mac is False
     assert item.check.mode == "none"
     assert item.label == "mp4kv2-panel-minio :9001"
     assert item.url is None
-    assert "web:http://localhost:19001" not in by_key
+    assert item.kind == "web"
 
 
 def test_reverse_forward_does_not_make_reachable(hosts, containers, ingresses, edge, forwards):
@@ -132,9 +137,9 @@ def test_reverse_forward_does_not_make_reachable(hosts, containers, ingresses, e
         for item in forwards
     ]
     built = build_endpoints(hosts, containers, ingresses, edge, reversed_mysql)
-    keys = {item.key for item in built}
-    assert "conn:mysql:127.0.0.1:3310" not in keys
-    assert "unreachable:kvs-mysql:3306" in keys
+    by_key = {item.key: item for item in built}
+    assert by_key[KVS_MYSQL].reachable_from_mac is False
+    assert by_key[KVS_MYSQL].check.mode == "none"
 
 
 def test_edge_backends_not_listed(endpoints):
@@ -180,3 +185,49 @@ def test_projects_skip_tools_and_unknown_branch(containers):
     assert ("cd_traffic", "mp4k_v2") in pairs
     assert all(p.group != "tools" for p in projects)
     assert all(p.branch is None for p in projects)
+
+
+def test_container_key_does_not_depend_on_forward(hosts, containers, ingresses, edge, forwards):
+    forwarded = {item.key: item for item in build_endpoints(hosts, containers, ingresses, edge, forwards)}
+    unforwarded = {item.key: item for item in build_endpoints(hosts, containers, ingresses, edge, [])}
+    container_keys = {key for key, item in forwarded.items() if item.source == "container"}
+    assert container_keys
+    assert all(key.startswith("container:") for key in container_keys)
+    assert container_keys == {key for key, item in unforwarded.items() if item.source == "container"}
+    assert forwarded[KVS_MYSQL].reachable_from_mac is True
+    assert unforwarded[KVS_MYSQL].reachable_from_mac is False
+
+
+def _stopped(inspects: list[dict], name: str) -> list[dict]:
+    flipped = copy.deepcopy(inspects)
+    for item in flipped:
+        if item["Name"].lstrip("/") == name:
+            item["State"]["Running"] = False
+            item["NetworkSettings"]["Ports"] = {}
+    return flipped
+
+
+def test_stopped_container_keeps_item_with_check(inspects, hosts, ingresses, edge, forwards):
+    containers = [from_inspect(item) for item in _stopped(inspects, "kvs-mysql")]
+    by_key = {item.key: item for item in build_endpoints(hosts, containers, ingresses, edge, forwards)}
+    item = by_key[KVS_MYSQL]
+    assert item.reachable_from_mac is True
+    assert (item.check.mode, item.check.host, item.check.port) == ("tcp", "127.0.0.1", 3310)
+
+
+def test_route_owner_prefers_running_container(hosts, containers, ingresses, edge, forwards):
+    vip_port = edge.route_tls("vip4k.com.local")
+    owner = next(c for c in containers if any(port[1] == vip_port for port in c.ports))
+    impostor = ContainerInfo(
+        name="old-copy",
+        running=False,
+        image="nginx",
+        started_at=None,
+        project_dir="/Users/i.senishin/project/other/stale",
+        service="nginx",
+        ports=[("0.0.0.0", vip_port, 80, "tcp")],
+    )
+    built = build_endpoints(hosts, [impostor, *containers], ingresses, edge, forwards)
+    item = next(item for item in built if item.key == "web:https://vip4k.com.local")
+    assert owner.running is True
+    assert (item.group, item.subgroup) == ("cd_traffic", "kvs")

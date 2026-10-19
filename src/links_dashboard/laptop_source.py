@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -7,6 +8,8 @@ from links_dashboard.config import KIND_NODE
 ROUTE_FILE = Path("/proc/net/route")
 VPN_DESTINATION = "0000000A"
 VPN_MASK = "00E0FFFF"
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -32,6 +35,7 @@ def docker_version(client: Any) -> str | None:
     try:
         return client.version().get("Version")
     except Exception:
+        logger.warning("could not read the Docker version", exc_info=True)
         return None
 
 
@@ -39,6 +43,7 @@ def kind_is_running(client: Any) -> bool:
     try:
         containers = client.containers.list(filters={"name": KIND_NODE})
     except Exception:
+        logger.warning("could not list the kind node container", exc_info=True)
         return False
     return any(container.name == KIND_NODE for container in containers)
 

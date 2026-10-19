@@ -155,6 +155,10 @@ class DashboardService:
         return self._state
 
     async def _mutate(self, change: Callable[[State], State], *, strict: bool = True) -> State:
+        """Apply a change and save it; a cancelled caller cannot leave disk and memory out of sync."""
+        return await asyncio.shield(self._apply(change, strict))
+
+    async def _apply(self, change: Callable[[State], State], strict: bool) -> State:
         """Apply a change under the state lock and save it atomically; strict changes fail on I/O errors."""
         async with self._state_lock:
             updated = change(self._current_state())

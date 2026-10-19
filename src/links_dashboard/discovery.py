@@ -1,4 +1,3 @@
-import re
 from dataclasses import dataclass, field
 
 from links_dashboard.cluster_source import IngressInfo
@@ -68,7 +67,7 @@ def _container_group(container: ContainerInfo) -> Group:
 
 def _port_owners(containers: list[ContainerInfo]) -> dict[int, ContainerInfo]:
     owners: dict[int, ContainerInfo] = {}
-    for container in containers:
+    for container in sorted(containers, key=lambda item: not item.running):
         for host_ip, host_port, _, _ in container.ports:
             if host_ip in LOOPBACK_BINDINGS:
                 owners.setdefault(host_port, container)
@@ -160,10 +159,6 @@ def _first_env(env: dict[str, str], names: tuple[str, ...]) -> str | None:
     return next((env[name] for name in names if env.get(name)), None)
 
 
-def _slug(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-
-
 def _conn_details(container: ContainerInfo, proto: str, src_port: int) -> dict[str, str]:
     optional = {
         "user": _first_env(container.env, USER_ENV),
@@ -180,6 +175,12 @@ def _conn_label(details: dict[str, str]) -> str:
     return " · ".join(parts)
 
 
+def container_key(container: ContainerInfo, port: Port) -> str:
+    """Stable key of a published container port, independent of any Mac forward."""
+    _, _, container_port, transport = port
+    return f"container:{container.name}:{container_port}/{transport}"
+
+
 def _forwarded_endpoint(
     container: ContainerInfo, port: Port, src_port: int, proto: str | None
 ) -> Endpoint:
@@ -189,7 +190,7 @@ def _forwarded_endpoint(
     if proto is not None:
         details = _conn_details(container, proto, src_port)
         return Endpoint(
-            key=f"conn:{_slug(proto)}:{LOOPBACK}:{src_port}",
+            key=container_key(container, port),
             kind="conn",
             label=_conn_label(details),
             url=None,
@@ -200,7 +201,7 @@ def _forwarded_endpoint(
     is_tls = container_port in TLS_PORTS
     url = f"{'https' if is_tls else 'http'}://{MAC_WEB_HOST}:{src_port}"
     return Endpoint(
-        key=f"web:{url}",
+        key=container_key(container, port),
         kind="web",
         label=f"{MAC_WEB_HOST}:{src_port}",
         url=url,
@@ -214,7 +215,7 @@ def _unreachable_endpoint(container: ContainerInfo, port: Port, proto: str | Non
     _, host_port, container_port, _ = port
     group, subgroup = _container_group(container)
     return Endpoint(
-        key=f"unreachable:{container.name}:{container_port}",
+        key=container_key(container, port),
         kind="conn" if proto is not None else "web",
         label=f"{container.name} :{container_port}",
         url=None,

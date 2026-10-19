@@ -38,9 +38,19 @@ def parse_ports(published: dict[str, Any] | None) -> list[Port]:
     for spec, bindings in (published or {}).items():
         container_port, _, proto = spec.partition("/")
         for binding in bindings or []:
-            key = (int(binding["HostPort"]), int(container_port), proto)
-            seen.setdefault(key, (binding["HostIp"], key[0], key[1], proto))
+            host_port = binding.get("HostPort")
+            if not host_port:
+                continue
+            key = (int(host_port), int(container_port), proto)
+            seen.setdefault(key, (binding.get("HostIp", ""), key[0], key[1], proto))
     return list(seen.values())
+
+
+def published_ports(attrs: dict[str, Any], running: bool) -> list[Port]:
+    """Live port map of a running container; the configured bindings of a stopped one."""
+    if running:
+        return parse_ports((attrs.get("NetworkSettings") or {}).get("Ports"))
+    return parse_ports((attrs.get("HostConfig") or {}).get("PortBindings"))
 
 
 def parse_started_at(state: dict[str, Any]) -> str | None:
@@ -54,15 +64,16 @@ def from_inspect(attrs: dict[str, Any]) -> ContainerInfo:
     config = attrs.get("Config") or {}
     labels = config.get("Labels") or {}
     state = attrs.get("State") or {}
+    running = bool(state.get("Running"))
     return ContainerInfo(
         name=attrs["Name"].lstrip("/"),
-        running=bool(state.get("Running")),
+        running=running,
         image=config.get("Image", ""),
         started_at=parse_started_at(state),
         project_dir=labels.get(LABEL_DIR),
         service=labels.get(LABEL_SERVICE),
         env=parse_env(config.get("Env")),
-        ports=parse_ports((attrs.get("NetworkSettings") or {}).get("Ports")),
+        ports=published_ports(attrs, running),
     )
 
 

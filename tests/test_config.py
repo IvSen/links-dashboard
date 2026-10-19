@@ -29,8 +29,8 @@ def test_known_hosts():
 
 
 def test_default_description_keys():
-    assert DEFAULT_DESCRIPTIONS["web:https://localhost:9443"] == "Контейнеры и кластер в вебе"
-    assert DEFAULT_DESCRIPTIONS["web:http://localhost:19001"] == "Веб-консоль MinIO (mp4k_v2)"
+    assert DEFAULT_DESCRIPTIONS["container:portainer:9443/tcp"] == "Контейнеры и кластер в вебе"
+    assert DEFAULT_DESCRIPTIONS["container:mp4kv2-panel-minio:9001/tcp"] == "Веб-консоль MinIO (mp4k_v2)"
     assert "web:https://portainer.test:9443" not in DEFAULT_DESCRIPTIONS
 
 

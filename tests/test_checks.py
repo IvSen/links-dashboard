@@ -171,3 +171,16 @@ async def test_check_many_isolates_errors():
             "bad_web": CheckTarget("http", "127.0.0.1", 70000, None),
         }
         assert await check_many(targets) == {"good": "up", "bad": "down", "bad_web": "down"}
+
+
+async def test_check_many_logs_unexpected_error(monkeypatch, caplog):
+    async def broken(target, timeout=3.0):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("links_dashboard.checks.check", broken)
+    with caplog.at_level("WARNING", logger="links_dashboard.checks"):
+        result = await check_many({"a": web(1)})
+    assert result == {"a": "down"}
+    record = next(r for r in caplog.records if r.name == "links_dashboard.checks")
+    assert record.levelname == "WARNING"
+    assert record.exc_info is not None
