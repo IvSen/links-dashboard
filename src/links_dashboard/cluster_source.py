@@ -6,7 +6,9 @@ from kubernetes import client, config
 from kubernetes.config.config_exception import ConfigException
 from urllib3.exceptions import HTTPError
 
-REQUEST_TIMEOUT = 3
+CONNECT_TIMEOUT = 2
+READ_TIMEOUT = 3
+REQUEST_TIMEOUT = (CONNECT_TIMEOUT, READ_TIMEOUT)
 CLUSTER_ERRORS = (
     client.ApiException,
     ConfigException,
@@ -40,7 +42,10 @@ def to_ingress_info(ingress: client.V1Ingress) -> IngressInfo:
 
 def list_ingresses(kubeconfig: Path) -> list[IngressInfo]:
     try:
-        api_client = config.new_client_from_config(config_file=str(kubeconfig))
+        api_client = config.new_client_from_config(
+            config_file=str(kubeconfig),
+            client_configuration=client.Configuration(retries=False),
+        )
         api = client.NetworkingV1Api(api_client)
         items = api.list_ingress_for_all_namespaces(_request_timeout=REQUEST_TIMEOUT).items
         return [to_ingress_info(item) for item in items]

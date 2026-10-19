@@ -75,3 +75,38 @@ def test_to_ingress_info_without_spec():
 
     ingress = client.V1Ingress(metadata=client.V1ObjectMeta(namespace="n", name="i"))
     assert to_ingress_info(ingress) == IngressInfo("n", "i", [])
+
+
+def test_cluster_hung_server_fails_fast(tmp_path):
+    import threading
+    import time
+
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen(16)
+    accepted = []
+    stop = threading.Event()
+
+    def accept_forever():
+        server.settimeout(0.2)
+        while not stop.is_set():
+            try:
+                accepted.append(server.accept()[0])
+            except OSError:
+                continue
+
+    thread = threading.Thread(target=accept_forever, daemon=True)
+    thread.start()
+    try:
+        kubeconfig = write_kubeconfig(tmp_path / "kubeconfig", server.getsockname()[1])
+        started = time.monotonic()
+        with pytest.raises(ClusterUnavailable):
+            list_ingresses(kubeconfig)
+        elapsed = time.monotonic() - started
+    finally:
+        stop.set()
+        thread.join()
+        for conn in accepted:
+            conn.close()
+        server.close()
+    assert elapsed < 5
