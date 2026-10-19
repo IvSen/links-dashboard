@@ -1,0 +1,118 @@
+#!/usr/bin/python3
+"""Read-only info command for links-dashboard.
+
+Runs as an SSH forced command on the Mac. Prints one JSON object to stdout.
+Python 3.9, standard library only. Never starts the Mutagen daemon and never
+changes anything.
+"""
+import glob
+import json
+import os
+import subprocess
+import sys
+from datetime import datetime, timezone
+
+MUTAGEN = "/opt/homebrew/bin/mutagen"
+GIT = "/usr/bin/git"
+HOSTS_FILE = "/etc/hosts"
+COMMAND_TIMEOUT = 10
+ERROR_LIMIT = 500
+
+
+def _clip(message):
+    return message.strip()[:ERROR_LIMIT]
+
+
+def _env():
+    home = os.path.expanduser("~")
+    return {
+        **os.environ,
+        "HOME": home,
+        "MUTAGEN_DISABLE_AUTOSTART": "1",
+        "GIT_OPTIONAL_LOCKS": "0",
+    }
+
+
+def _run(argv):
+    return subprocess.run(
+        argv,
+        capture_output=True,
+        text=True,
+        timeout=COMMAND_TIMEOUT,
+        env=_env(),
+        check=False,
+    )
+
+
+def read_hosts():
+    try:
+        with open(HOSTS_FILE, encoding="utf-8", errors="replace") as handle:
+            return handle.read()
+    except OSError:
+        return ""
+
+
+def mutagen_json(kind):
+    """Return (parsed json or None, error message or None)."""
+    try:
+        result = _run([MUTAGEN, kind, "list", "--template", "{{json .}}"])
+    except (OSError, subprocess.SubprocessError) as error:
+        return None, _clip("%s: %s" % (type(error).__name__, error))
+    if result.returncode != 0:
+        return None, _clip(result.stderr or result.stdout or "exit code %d" % result.returncode)
+    try:
+        return json.loads(result.stdout), None
+    except ValueError as error:
+        return None, _clip("invalid json: %s" % error)
+
+
+def project_dirs():
+    pattern = os.path.join(os.path.expanduser("~"), "project", "*", "*")
+    return sorted(path for path in glob.glob(pattern) if os.path.exists(os.path.join(path, ".git")))
+
+
+def current_branch(directory):
+    try:
+        result = _run([GIT, "-C", directory, "branch", "--show-current"])
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def collect_branches():
+    branches = {}
+    for directory in project_dirs():
+        branch = current_branch(directory)
+        if branch is not None:
+            branches[directory] = branch
+    return branches
+
+
+def build_payload():
+    errors = {}
+    sync, errors_sync = mutagen_json("sync")
+    forward, errors_forward = mutagen_json("forward")
+    if errors_sync is not None:
+        errors["sync"] = errors_sync
+    if errors_forward is not None:
+        errors["forward"] = errors_forward
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "hosts": read_hosts(),
+        "sync": sync,
+        "forward": forward,
+        "branches": collect_branches(),
+        "errors": errors,
+    }
+
+
+def main():
+    sys.stdout.write(json.dumps(build_payload()))
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
