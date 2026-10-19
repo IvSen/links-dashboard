@@ -36,6 +36,7 @@ class Settings:
     mac_user: str
     mac_key: Path
     port: int
+    mac_files: Path = Path("/data/mac")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -48,4 +49,5 @@ class Settings:
             mac_user=env.get("LD_MAC_USER", "i.senishin"),
             mac_key=Path(env.get("LD_MAC_KEY", "/data/mac_key")),
             port=int(env.get("LD_PORT", "8099")),
+            mac_files=Path(env.get("LD_MAC_FILES", "/data/mac")),
         )

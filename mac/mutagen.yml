@@ -1,0 +1,30 @@
+sync:
+  defaults:
+    mode: one-way-replica
+    configurationBeta:
+      permissions:
+        defaultFileMode: 0644
+        defaultDirectoryMode: 0755
+  ld-mac-hosts:
+    alpha: "/private/etc/hosts"
+    beta: "winbox:/home/ivan/.config/links-dashboard/mac/hosts"
+  ld-mac-cd-traffic:
+    alpha: "/Users/i.senishin/project/cd_traffic/mutagen.yml"
+    beta: "winbox:/home/ivan/.config/links-dashboard/mac/cd_traffic.mutagen.yml"
+  ld-mac-carbox:
+    alpha: "/Users/i.senishin/project/carbox/mutagen.yml"
+    beta: "winbox:/home/ivan/.config/links-dashboard/mac/carbox.mutagen.yml"
+  ld-mac-tools:
+    alpha: "/Users/i.senishin/project/home/links-dashboard/mac/mutagen.yml"
+    beta: "winbox:/home/ivan/.config/links-dashboard/mac/tools.mutagen.yml"
+
+forward:
+  portainer:
+    source: "tcp:localhost:9443"
+    destination: "winbox:tcp:localhost:9443"
+  netdata:
+    source: "tcp:127.0.0.1:19999"
+    destination: "winbox:tcp:127.0.0.1:19999"
+  beszel:
+    source: "tcp:127.0.0.1:18095"
+    destination: "winbox:tcp:127.0.0.1:8095"

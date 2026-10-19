@@ -4,7 +4,7 @@ from links_dashboard.config import DEFAULT_DESCRIPTIONS, KNOWN_HOSTS, TLS_PORTS,
 
 
 def test_defaults(monkeypatch):
-    for name in ("LD_STATE", "LD_EDGE_CONF", "LD_KUBECONFIG", "LD_MAC_HOST", "LD_MAC_USER", "LD_MAC_KEY", "LD_PORT"):
+    for name in ("LD_STATE", "LD_EDGE_CONF", "LD_KUBECONFIG", "LD_MAC_HOST", "LD_MAC_USER", "LD_MAC_KEY", "LD_PORT", "LD_MAC_FILES"):
         monkeypatch.delenv(name, raising=False)
     settings = Settings.from_env()
     assert settings.state == Path("/data/state.json")
@@ -14,12 +14,15 @@ def test_defaults(monkeypatch):
     assert settings.mac_user == "i.senishin"
     assert settings.mac_key == Path("/data/mac_key")
     assert settings.port == 8099
+    assert settings.mac_files == Path("/data/mac")
 
 
 def test_env_overrides(monkeypatch):
     monkeypatch.setenv("LD_PORT", "9000")
     monkeypatch.setenv("LD_STATE", "/tmp/s.json")
+    monkeypatch.setenv("LD_MAC_FILES", "/tmp/mac")
     settings = Settings.from_env()
+    assert settings.mac_files == Path("/tmp/mac")
     assert settings.port == 9000
     assert settings.state == Path("/tmp/s.json")
 

@@ -3,11 +3,16 @@ import { el, formatBytes, formatCount, formatUptime, replaceChildren, shortPath 
 const PURPOSE_LIMIT = 200;
 const NUMERIC = new Set(["Файлы", "Конфликты", "Проблемы", "Соединений"]);
 
+function dotClass(data) {
+  if (data.bad) return "dot--down";
+  return data.neutral ? "dot--na" : "dot--up";
+}
+
 function tile(data) {
   return el(
     "div",
     { class: `tile${data.bad ? " tile--bad" : ""}`, dataset: { tile: data.id } },
-    el("div", { class: "tile__title" }, el("span", { class: `dot ${data.bad ? "dot--down" : "dot--up"}`, "aria-hidden": "true" }), data.title),
+    el("div", { class: "tile__title" }, el("span", { class: `dot ${dotClass(data)}`, "aria-hidden": "true" }), data.title),
     el("div", { class: "tile__value", text: data.value }),
     data.sub ? el("div", { class: "tile__sub", text: data.sub }) : null,
   );
@@ -109,10 +114,10 @@ function forwardRows(forwards, onSavePurpose) {
       "tr",
       {},
       cell("Имя", f.reverse ? [f.name, el("span", { class: "tag", text: "обратный" })] : f.name, "cell-name"),
-      cell("Статус", f.status_text, tone(f.ok)),
+      cell("Статус", f.status_text, f.configured ? "muted" : tone(f.ok)),
       cell("На Маке", mac, "mono"),
       cell("На ноутбуке", laptop, "mono"),
-      cell("Соединений", String(f.open_connections), "num"),
+      cell("Соединений", f.configured ? "-" : String(f.open_connections), "num"),
       purposeEditor(f, onSavePurpose),
     );
   });
@@ -147,6 +152,10 @@ function laptopRows(laptop) {
   ];
 }
 
+function noteBlock(note) {
+  return note ? el("p", { class: "muted", text: note }) : null;
+}
+
 function errorsBlock(errors) {
   const entries = Object.entries(errors || {});
   if (!entries.length) return null;
@@ -167,6 +176,7 @@ export function renderHealth(health, onSavePurpose) {
     table("Пробросы портов", ["Имя", "Статус", "На Маке", "На ноутбуке", "Соединений", "Для чего"], forwardRows(health.forwards, onSavePurpose), macDown),
     table("edge-proxy", ["Контейнер", "Статус", "Слушает", "Маршруты"], edgeRows(health.edge), "контейнер edge-proxy не найден"),
     table("Ноутбук", ["VPN", "Docker", "Кластер kind"], laptopRows(health.laptop), "нет данных"),
+    noteBlock(health.mac_note),
     errorsBlock(health.errors),
   );
 }

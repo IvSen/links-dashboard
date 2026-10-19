@@ -18,4 +18,5 @@ services:
       LD_MAC_HOST: 10.0.100.243
       LD_MAC_USER: i.senishin
       LD_MAC_KEY: /data/mac_key
+      LD_MAC_FILES: /data/mac
       LD_PORT: "8099"

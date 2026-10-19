@@ -12,6 +12,7 @@ from links_dashboard.cluster_source import ClusterUnavailable, IngressInfo, list
 from links_dashboard.config import Settings
 from links_dashboard.docker_source import ContainerInfo, list_containers
 from links_dashboard.laptop_source import ROUTE_FILE, LaptopInfo, has_vpn_route, read_laptop
+from links_dashboard.mac_files import with_file_fallback
 from links_dashboard.mac_source import MacInfo, MacUnavailable, fetch_mac_info
 from links_dashboard.parsers import EdgeRoutes, parse_edge_conf
 
@@ -96,8 +97,11 @@ def _read_edge(path: Path) -> EdgeRoutes:
 def real_sources(settings: Settings) -> Sources:
     """Sources talking to the real Mac, Docker, cluster and edge config; nothing runs until called."""
 
-    async def mac() -> MacInfo:
+    async def over_ssh() -> MacInfo:
         return await fetch_mac_info(settings.mac_host, settings.mac_user, settings.mac_key)
+
+    async def mac() -> MacInfo:
+        return await with_file_fallback(over_ssh, settings.mac_files)
 
     async def containers() -> list[ContainerInfo]:
         return await asyncio.to_thread(_with_docker, list_containers)

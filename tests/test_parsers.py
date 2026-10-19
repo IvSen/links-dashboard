@@ -5,6 +5,7 @@ import pytest
 
 from links_dashboard.parsers import (
     parse_edge_conf,
+    parse_forward_config,
     parse_forwards,
     parse_hosts,
     parse_sync,
@@ -182,3 +183,60 @@ def test_edge_routes():
 def test_edge_conf_missing_blocks_raises():
     with pytest.raises(ValueError):
         parse_edge_conf("events {}")
+
+
+def test_forward_config_reads_named_forwards():
+    forwards = {f.name: f for f in parse_forward_config(_text("cd_traffic.mutagen.yml"))}
+    assert set(forwards) == {
+        "edge-http", "edge-https", "kvs-mysql", "mp4k-http", "mp4k-mysql", "mp4k-minio", "mp4k-minio-console",
+    }
+    mysql = forwards["kvs-mysql"]
+    assert mysql.source == "tcp:127.0.0.1:3310"
+    assert mysql.destination == "winbox:tcp:127.0.0.1:3310"
+    assert (mysql.src_port, mysql.dest_port) == (3310, 3310)
+    assert mysql.reverse is False
+    assert mysql.configured is True
+    assert mysql.ok is False
+    assert mysql.status_text == "из конфига"
+    assert mysql.open_connections == 0
+    assert forwards["edge-https"].src_port == 443
+
+
+def test_forward_config_reverse_and_defaults():
+    text = """
+forward:
+  defaults:
+    socket:
+      overwriteMode: overwrite
+  xdebug:
+    source: "winbox:tcp:0.0.0.0:9003"
+    destination: "tcp:127.0.0.1:9003"
+  beszel:
+    source: "tcp:127.0.0.1:18095"
+    destination: "winbox:tcp:127.0.0.1:8095"
+"""
+    forwards = {f.name: f for f in parse_forward_config(text)}
+    assert set(forwards) == {"xdebug", "beszel"}
+    assert forwards["xdebug"].reverse is True
+    assert forwards["xdebug"].source == "winbox:tcp:0.0.0.0:9003"
+    assert (forwards["beszel"].src_port, forwards["beszel"].dest_port) == (18095, 8095)
+
+
+def test_forward_config_without_forward_section():
+    assert parse_forward_config("sync:\n  a:\n    alpha: .\n") == []
+    assert parse_forward_config("") == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "- just a list",
+        "forward: [1, 2]",
+        "forward:\n  db: plain-string",
+        "forward:\n  db:\n    source: 5\n    destination: tcp:1",
+        "forward: {db: {source: 'tcp:1'",
+    ],
+)
+def test_forward_config_rejects_bad_shapes(text):
+    with pytest.raises(ValueError):
+        parse_forward_config(text)

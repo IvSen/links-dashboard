@@ -135,3 +135,33 @@ def test_forward_error_marks_tile_without_data():
     assert tile.sub == "daemon not running"
     assert health.tiles[0].bad is False
     assert health.errors["forward"] == "daemon not running"
+
+
+def test_file_mode_tiles_are_neutral():
+    configured = Forward("kvs-mysql", False, "из конфига", "tcp:a", "winbox:tcp:b", 3310, 3310, False, 0, True)
+    mac = MacInfo(forwards=[configured], errors={"ssh": "refused"}, live=False)
+    health = build_health(mac, None, CONTAINER, EDGE, LAPTOP, {})
+    sync, forwards = health.tiles[:2]
+    assert (sync.value, sync.bad, sync.neutral) == ("нет живого статуса", False, True)
+    assert sync.sub == "данные Мака из файлов, без SSH"
+    assert (forwards.value, forwards.bad, forwards.neutral) == ("1 из конфига", False, True)
+    assert forwards.sub == "живой статус только по SSH"
+    assert health.forwards == [configured]
+    assert health.errors == {}
+    assert health.mac_note == "Данные Мака из файлов Mutagen: SSH до Мака не ответил (refused)"
+
+
+def test_file_mode_forward_problem_shown_in_tile():
+    mac = MacInfo(errors={"ssh": "refused", "forward": "tools.mutagen.yml: bad"}, live=False)
+    tile = build_health(mac, None, CONTAINER, EDGE, LAPTOP, {}).tiles[1]
+    assert tile.value == "0 из конфига"
+    assert tile.sub == "tools.mutagen.yml: bad"
+    assert tile.bad is False
+    assert build_health(mac, None, CONTAINER, EDGE, LAPTOP, {}).errors == {"forward": "tools.mutagen.yml: bad"}
+
+
+def test_live_tiles_are_not_neutral():
+    mac = MacInfo(sync=[session()], forwards=[forward()])
+    health = build_health(mac, None, CONTAINER, EDGE, LAPTOP, {})
+    assert [t.neutral for t in health.tiles] == [False, False, False, False]
+    assert health.mac_note == ""

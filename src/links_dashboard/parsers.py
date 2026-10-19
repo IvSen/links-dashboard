@@ -1,6 +1,8 @@
 import re
 from dataclasses import dataclass
 
+import yaml
+
 HOSTS_LOOPBACK = "127.0.0.1"
 HOSTS_EXCLUDED = frozenset({"localhost", "broadcasthost", "kubernetes.docker.internal"})
 
@@ -15,8 +17,12 @@ SYNC_STATUS_TEXT = {
 NO_LINK_TEXT = "нет связи"
 PAUSED_TEXT = "на паузе"
 FORWARDING_TEXT = "работает"
+CONFIGURED_TEXT = "из конфига"
+CONFIGURED_STATUS = "configured"
+FORWARD_DEFAULTS_KEY = "defaults"
 
 _ENDPOINT_PORT = re.compile(r"^tcp\d?:.*:(\d+)$")
+_FORWARD_URL = re.compile(r"^(?:(?P<host>.+?):)?(?P<endpoint>(?:tcp[46]?|unix|npipe):.*)$")
 _LISTEN = re.compile(r"^\s*listen\s+(\d+)\b", re.MULTILINE)
 _MAP_ENTRY = re.compile(r"^\s*(\S+)\s+[\w.\-]+:(\d+)\s*;", re.MULTILINE)
 
@@ -101,6 +107,7 @@ class Forward:
     src_port: int | None
     reverse: bool
     open_connections: int
+    configured: bool = False
 
 
 def _forward_url(side: dict) -> str:
@@ -119,6 +126,8 @@ def _forward_status_text(status: str, paused: bool) -> str:
         return PAUSED_TEXT
     if status == "forwarding":
         return FORWARDING_TEXT
+    if status == CONFIGURED_STATUS:
+        return CONFIGURED_TEXT
     return NO_LINK_TEXT if status.startswith("connecting") or status == "disconnected" else status
 
 
@@ -137,11 +146,49 @@ def _parse_forward(raw: dict) -> Forward:
         src_port=_endpoint_port(source),
         reverse=_forward_url(source).startswith("winbox:"),
         open_connections=int(raw.get("openConnections") or 0),
+        configured=status == CONFIGURED_STATUS,
     )
 
 
 def parse_forwards(data: list[dict]) -> list[Forward]:
     return [_parse_forward(raw) for raw in data]
+
+
+def _split_forward_url(url: object, name: str) -> dict:
+    match = _FORWARD_URL.match(url) if isinstance(url, str) else None
+    if match is None:
+        raise ValueError(f"forward {name}: unsupported endpoint {url!r}")
+    side = {"endpoint": match.group("endpoint")}
+    return {**side, "host": match.group("host")} if match.group("host") else side
+
+
+def _config_forward(name: str, spec: object) -> Forward:
+    if not isinstance(spec, dict):
+        raise ValueError(f"forward {name} must be a mapping")
+    return _parse_forward(
+        {
+            "name": name,
+            "status": CONFIGURED_STATUS,
+            "source": _split_forward_url(spec.get("source"), name),
+            "destination": _split_forward_url(spec.get("destination"), name),
+        }
+    )
+
+
+def parse_forward_config(text: str) -> list[Forward]:
+    """Forwards declared in the `forward:` section of a Mutagen project file, without live status."""
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError as error:
+        raise ValueError(f"invalid Mutagen project file: {error}") from error
+    if data is None:
+        return []
+    if not isinstance(data, dict):
+        raise ValueError("Mutagen project file must be a mapping")
+    section = data.get("forward") or {}
+    if not isinstance(section, dict):
+        raise ValueError("forward section must be a mapping")
+    return [_config_forward(str(name), spec) for name, spec in section.items() if name != FORWARD_DEFAULTS_KEY]
 
 
 Route = tuple[str, bool, int]

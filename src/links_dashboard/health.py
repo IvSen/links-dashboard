@@ -8,6 +8,11 @@ from links_dashboard.parsers import EdgeRoutes, Forward, SyncSession
 
 MAC_DOWN = "Мак недоступен"
 NO_DATA = "нет данных"
+NO_LIVE_STATUS = "нет живого статуса"
+FILE_MODE_SYNC_SUB = "данные Мака из файлов, без SSH"
+FILE_MODE_FORWARDS_SUB = "живой статус только по SSH"
+FILE_MODE_NOTE = "Данные Мака из файлов Mutagen: SSH до Мака не ответил ({reason})"
+SSH_ERROR_KEY = "ssh"
 
 
 @dataclass(frozen=True)
@@ -17,6 +22,7 @@ class Tile:
     value: str
     sub: str
     bad: bool
+    neutral: bool = False
 
 
 @dataclass(frozen=True)
@@ -27,6 +33,7 @@ class Health:
     edge: dict[str, Any] = field(default_factory=dict)
     laptop: LaptopInfo | None = None
     errors: dict[str, str] = field(default_factory=dict)
+    mac_note: str = ""
 
 
 def _mac_down_tile(tile_id: str, title: str, mac_error: str | None) -> Tile:
@@ -56,9 +63,19 @@ def _forwards_tile(forwards: list[Forward], purpose: dict[str, str]) -> Tile:
     return Tile("forwards", "Пробросы", value, sub, bool(broken))
 
 
+def _file_mode_tiles(mac: MacInfo) -> list[Tile]:
+    forwards_sub = mac.errors.get("forward") or FILE_MODE_FORWARDS_SUB
+    return [
+        Tile("sync", "Синхронизация", NO_LIVE_STATUS, FILE_MODE_SYNC_SUB, False, neutral=True),
+        Tile("forwards", "Пробросы", f"{len(mac.forwards)} из конфига", forwards_sub, False, neutral=True),
+    ]
+
+
 def _mac_tiles(mac: MacInfo | None, mac_error: str | None, purpose: dict[str, str]) -> list[Tile]:
     if mac is None:
         return [_mac_down_tile("sync", "Синхронизация", mac_error), _mac_down_tile("forwards", "Пробросы", mac_error)]
+    if not mac.live:
+        return _file_mode_tiles(mac)
     sync_error = mac.errors.get("sync")
     forward_error = mac.errors.get("forward")
     sync = _no_data_tile("sync", "Синхронизация", sync_error) if sync_error else _sync_tile(mac.sync)
@@ -116,10 +133,17 @@ def _laptop_tile(laptop: LaptopInfo | None) -> Tile:
 
 
 def _collect_errors(mac: MacInfo | None, mac_error: str | None) -> dict[str, str]:
-    errors = dict(mac.errors) if mac else {}
-    if mac is None and mac_error:
-        errors["mac"] = mac_error
-    return errors
+    if mac is None:
+        return {"mac": mac_error} if mac_error else {}
+    if mac.live:
+        return dict(mac.errors)
+    return {name: text for name, text in mac.errors.items() if name != SSH_ERROR_KEY}
+
+
+def _mac_note(mac: MacInfo | None) -> str:
+    if mac is None or mac.live:
+        return ""
+    return FILE_MODE_NOTE.format(reason=mac.errors.get(SSH_ERROR_KEY, "нет ответа"))
 
 
 def build_health(
@@ -138,4 +162,5 @@ def build_health(
         edge=_edge_details(edge_container, edge),
         laptop=laptop,
         errors=_collect_errors(mac, mac_error),
+        mac_note=_mac_note(mac),
     )

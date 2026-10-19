@@ -32,6 +32,7 @@ class MacInfo:
     forwards: list[Forward] = field(default_factory=list)
     branches: dict[str, str] = field(default_factory=dict)
     errors: dict[str, str] = field(default_factory=dict)
+    live: bool = True
 
 
 Runner = Callable[[list[str], float], Awaitable[RunResult]]

@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .superpowers/
 .pytest_cache/
+mac/mutagen.yml.lock

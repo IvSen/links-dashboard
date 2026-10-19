@@ -1,0 +1,58 @@
+sync:
+  defaults:
+    mode: two-way-resolved
+    ignore:
+      vcs: true
+      paths:
+        - ".DS_Store"
+        - "node_modules/"
+        - ".idea/"
+        - "graphify-out/"
+        - ".beads/"
+        - "**/.claude/worktrees/"
+        - "/var/"
+        - "/runtime/"
+  kvs:
+    alpha: "./kvs"
+    beta: "winbox:/Users/i.senishin/project/cd_traffic/kvs"
+    configurationBeta:
+      permissions:
+        defaultFileMode: 0644
+        defaultDirectoryMode: 0755
+  mp4k-v2:
+    alpha: "./mp4k_v2"
+    beta: "winbox:/Users/i.senishin/project/cd_traffic/mp4k_v2"
+    configurationBeta:
+      permissions:
+        defaultFileMode: 0644
+        defaultDirectoryMode: 0755
+  content-panel:
+    alpha: "./content-panel"
+    beta: "winbox:/Users/i.senishin/project/cd_traffic/content-panel"
+    configurationBeta:
+      permissions:
+        defaultFileMode: 0644
+        defaultDirectoryMode: 0755
+
+forward:
+  edge-http:
+    source: "tcp:0.0.0.0:80"
+    destination: "winbox:tcp:127.0.0.1:10080"
+  edge-https:
+    source: "tcp:0.0.0.0:443"
+    destination: "winbox:tcp:127.0.0.1:10443"
+  kvs-mysql:
+    source: "tcp:127.0.0.1:3310"
+    destination: "winbox:tcp:127.0.0.1:3310"
+  mp4k-http:
+    source: "tcp:127.0.0.1:8090"
+    destination: "winbox:tcp:127.0.0.1:8090"
+  mp4k-mysql:
+    source: "tcp:127.0.0.1:3308"
+    destination: "winbox:tcp:127.0.0.1:3308"
+  mp4k-minio:
+    source: "tcp:127.0.0.1:19000"
+    destination: "winbox:tcp:127.0.0.1:19000"
+  mp4k-minio-console:
+    source: "tcp:127.0.0.1:19001"
+    destination: "winbox:tcp:127.0.0.1:19001"
