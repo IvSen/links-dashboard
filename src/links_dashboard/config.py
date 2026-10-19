@@ -7,6 +7,8 @@ TOOL_CONTAINERS = {"portainer": ("tools", None)}
 KNOWN_HOSTS = {"netdata.test": ("tools", None), "links.test": ("tools", None)}
 KIND_NODE = "rosfines-dev-control-plane"
 EDGE_CONTAINER = "edge-proxy"
+EDGE_HTTP_LISTEN = 10080
+EDGE_TLS_LISTEN = 10443
 CONN_PORTS = {
     3306: "MySQL",
     5432: "PostgreSQL",
