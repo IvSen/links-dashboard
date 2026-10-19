@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>winbox · адреса</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%233b82f6'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="brand">
+        <span class="brand__name">winbox</span>
+        <span class="brand__ago" id="checked-ago" aria-live="off">проверяю…</span>
+      </div>
+      <label class="search">
+        <svg class="search__icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+        <span class="visually-hidden">Поиск</span>
+        <input id="search" type="search" placeholder="поиск по адресам и описаниям" autocomplete="off" spellcheck="false">
+      </label>
+      <button id="refresh" class="btn btn--primary" type="button">
+        <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M13.5 2.5v3h-3"/></svg>
+        <span class="btn__label">Обновить</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="page">
+    <div id="failed" class="banner" role="status" hidden></div>
+    <div id="notice" class="notice" role="alert" hidden></div>
+
+    <section id="health" class="health" aria-label="Состояние">
+      <div class="tiles" id="tiles">
+        <div class="tile tile--loading"></div><div class="tile tile--loading"></div>
+        <div class="tile tile--loading"></div><div class="tile tile--loading"></div>
+      </div>
+      <details class="details" id="health-details">
+        <summary>Подробное состояние</summary>
+        <div id="health-body" class="details__body"></div>
+      </details>
+    </section>
+
+    <div class="layout">
+      <nav id="tree" class="tree" aria-label="Группы">
+        <label class="tree__select">
+          <span class="visually-hidden">Группа</span>
+          <select id="group-select"></select>
+        </label>
+        <ul id="tree-list" class="tree__list"></ul>
+        <div id="tree-add" class="tree__add"></div>
+      </nav>
+      <section id="project" class="project" aria-live="polite">
+        <div class="skeleton"><span></span><span></span><span></span><span></span></div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

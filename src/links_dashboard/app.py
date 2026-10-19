@@ -1,4 +1,5 @@
 import logging
+import os
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict
 from pathlib import Path
@@ -158,4 +159,15 @@ def create_app(
     return app
 
 
-app = create_app()
+def app_from_env() -> FastAPI:
+    """The served app; LD_FAKE=1 wires fixture sources and a no-network checker for a local look."""
+    if os.environ.get("LD_FAKE") != "1":
+        return create_app()
+    from links_dashboard.fake import failing_from_env, fake_checker, fake_settings, fake_sources
+
+    settings = fake_settings()
+    logger.warning("LD_FAKE=1: serving fixture data, state in %s", settings.state)
+    return create_app(settings, sources=fake_sources(failing=failing_from_env()), checker=fake_checker)
+
+
+app = app_from_env()
