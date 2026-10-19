@@ -54,6 +54,11 @@ class SeenBody(StrictBody):
     keys: list[str] = Field(max_length=5_000)
 
 
+class PinBody(StrictBody):
+    key: str = Field(min_length=1, max_length=TEXT_LIMIT)
+    pinned: bool
+
+
 class PurposeBody(StrictBody):
     name: str = Field(min_length=1, max_length=NAME_LIMIT)
     text: str = Field(max_length=NAME_LIMIT)
@@ -116,8 +121,20 @@ def _install_reads(app: FastAPI, service: DashboardService) -> None:
     async def group(g: str = "", sg: str | None = None) -> dict[str, Any]:
         return asdict(await service.group_view(g, sg))
 
+    @app.get("/api/pinned")
+    async def pinned() -> dict[str, Any]:
+        return {"items": [asdict(item) for item in await service.pinned_view()]}
+
 
 def _install_writes(app: FastAPI, service: DashboardService) -> None:
+    @app.put("/api/pins")
+    async def put_pin(body: PinBody) -> dict[str, bool]:
+        try:
+            await service.set_pinned(body.key, body.pinned)
+        except UnknownItem as error:
+            raise HTTPException(status_code=404, detail=f"Неизвестный адрес: {body.key}") from error
+        return OK
+
     @app.patch("/api/items/{key:path}")
     async def patch_item(key: str, patch: ItemPatch) -> dict[str, bool]:
         try:

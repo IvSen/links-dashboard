@@ -286,6 +286,14 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .note--editing { padding: 10px; }
 .note__input { font-family: var(--font); font-size: 13.5px; }
 
+.pinned {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 18px 12px; margin-bottom: 16px; box-shadow: var(--shadow); min-width: 0;
+}
+.pinned__title { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.tag--place { color: var(--muted); }
+.pin-mark { font-size: 12px; line-height: 1; }
+
 .items { list-style: none; margin: 0; padding: 0; }
 .item { border-radius: var(--radius-small); transition: background 150ms var(--ease); }
 .item:hover { background: var(--hover); }
@@ -351,6 +359,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .tree__select { display: block; }
   .tree__add { padding: 0; margin-top: 6px; }
   .project { padding: 12px; box-shadow: none; }
+  .pinned { padding: 10px 12px; box-shadow: none; margin-bottom: 10px; }
   .item__line { flex-wrap: wrap; padding: 6px 4px; }
   .item__main { flex: 1 1 200px; }
   .item__actions { margin-left: auto; padding-left: 18px; }

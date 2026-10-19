@@ -241,3 +241,64 @@ def test_broken_edge_config_keeps_last_routes(client, world):
     assert body["failed_sources"]["edge"] == "ValueError: no stream block"
     assert len(body["health"]["tiles"]) == 4
     assert _item(_group(client, {"g": "tools"}), "web:http://beszel.test")["status"] == "up"
+
+
+def _pin(client: TestClient, key: str, pinned: bool = True):
+    return client.put("/api/pins", json={"key": key, "pinned": pinned})
+
+
+def _pinned(client: TestClient) -> list[dict]:
+    response = client.get("/api/pinned")
+    assert response.status_code == 200, response.text
+    return response.json()["items"]
+
+
+def test_pin_lists_item_with_status_and_place(client, tmp_path):
+    _refresh(client)
+    assert _pinned(client) == []
+    assert _pin(client, VIP).status_code == 200
+    items = _pinned(client)
+    assert [item["key"] for item in items] == [VIP]
+    assert items[0]["status"] == "up"
+    assert items[0]["pinned"] is True
+    assert (items[0]["group"], items[0]["subgroup"]) == ("cd_traffic", "kvs")
+    assert _item(_group(client, KVS), VIP)["pinned"] is True
+    saved = json.loads((tmp_path / "state.json").read_text())
+    assert saved["pinned"] == [VIP]
+    assert _pin(client, VIP, False).status_code == 200
+    assert _pinned(client) == []
+    assert _item(_group(client, KVS), VIP)["pinned"] is False
+
+
+def test_pinned_order_answering_first_then_pin_order(client, world):
+    _refresh(client)
+    assert _pin(client, MINIO_CONSOLE).status_code == 200
+    assert _pin(client, VIP).status_code == 200
+    assert [item["key"] for item in _pinned(client)] == [MINIO_CONSOLE, VIP]
+    world.containers = [item for item in world.containers if item.name != "mp4kv2-panel-minio"]
+    _refresh(client)
+    items = _pinned(client)
+    assert [(item["key"], item["status"]) for item in items] == [(VIP, "up"), (MINIO_CONSOLE, "missing")]
+
+
+def test_hiding_unpins(client):
+    _refresh(client)
+    assert _pin(client, VIP).status_code == 200
+    assert client.patch(f"/api/items/{quote(VIP, safe='')}", json={"hidden": True}).status_code == 200
+    assert _pinned(client) == []
+
+
+def test_pin_rejects_unknown_key(client):
+    _refresh(client)
+    response = _pin(client, "web:https://nope.local")
+    assert response.status_code == 404
+    assert client.put("/api/pins", json={"key": VIP}).status_code == 422
+
+
+def test_hidden_item_cannot_be_pinned(client):
+    _refresh(client)
+    assert client.patch(f"/api/items/{quote(VIP, safe='')}", json={"hidden": True}).status_code == 200
+    assert _pin(client, VIP).status_code == 200
+    assert _pinned(client) == []
+    hidden = _group(client, KVS)["hidden"]
+    assert next(item for item in hidden if item["key"] == VIP)["pinned"] is False

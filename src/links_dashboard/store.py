@@ -31,6 +31,7 @@ class State:
     known: dict[str, dict] = field(default_factory=dict)
     cached_hosts: list[str] = field(default_factory=list)
     forward_purpose: dict[str, str] = field(default_factory=dict)
+    pinned: list[str] = field(default_factory=list)
 
     def set_override(self, key: str, **fields: Any) -> "State":
         current = self.overrides.get(key, Override())
@@ -54,6 +55,12 @@ class State:
     def set_forward_purpose(self, name: str, text: str) -> "State":
         return replace(self, forward_purpose={**self.forward_purpose, name: text})
 
+    def set_pinned(self, key: str, pinned: bool) -> "State":
+        rest = [item for item in self.pinned if item != key]
+        if pinned and key in self.pinned:
+            return self
+        return replace(self, pinned=[*rest, key] if pinned else rest)
+
 
 def state_to_json(state: State) -> dict[str, Any]:
     return {
@@ -64,6 +71,7 @@ def state_to_json(state: State) -> dict[str, Any]:
         "known": dict(state.known),
         "cached_hosts": list(state.cached_hosts),
         "forward_purpose": dict(state.forward_purpose),
+        "pinned": list(state.pinned),
     }
 
 
@@ -76,6 +84,7 @@ def state_from_json(data: dict[str, Any]) -> State:
         known=dict(data["known"]),
         cached_hosts=list(data["cached_hosts"]),
         forward_purpose=dict(data["forward_purpose"]),
+        pinned=[str(key) for key in data.get("pinned") or []],
     )
 
 

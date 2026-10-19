@@ -38,6 +38,7 @@ def test_missing_file_gives_initial_groups(tmp_path: Path):
     assert state.known == {}
     assert state.cached_hosts == []
     assert state.forward_purpose == {}
+    assert state.pinned == []
 
 
 def test_roundtrip_keeps_overrides_notes_seen(tmp_path: Path):
@@ -50,6 +51,7 @@ def test_roundtrip_keeps_overrides_notes_seen(tmp_path: Path):
         .add_group("extra", "sub")
         .remember([make_endpoint()])
         .set_forward_purpose("pg", "База")
+        .set_pinned("web:https://vip4k.com.local", True)
     )
 
     store.save(state)
@@ -62,6 +64,7 @@ def test_roundtrip_keeps_overrides_notes_seen(tmp_path: Path):
     assert ("extra", "sub") in loaded.groups
     assert loaded.known["web:https://vip4k.com.local"]["label"] == "vip4k"
     assert loaded.forward_purpose == {"pg": "База"}
+    assert loaded.pinned == ["web:https://vip4k.com.local"]
 
 
 def test_helpers_do_not_mutate(tmp_path: Path):
@@ -126,3 +129,36 @@ def test_non_utf8_file_is_kept_aside(tmp_path: Path):
     aside = list(tmp_path.glob("s.json.corrupt-*"))
     assert len(aside) == 1
     assert aside[0].read_bytes() == b"\xff\xfe\x00"
+
+
+def test_set_pinned_keeps_order_and_is_idempotent(tmp_path: Path):
+    state = StateStore(tmp_path / "s.json").load()
+    pinned = state.set_pinned("a", True).set_pinned("b", True).set_pinned("a", True)
+    assert pinned.pinned == ["a", "b"]
+    assert pinned.set_pinned("a", False).pinned == ["b"]
+    assert pinned.set_pinned("missing", False).pinned == ["a", "b"]
+    assert state.pinned == []
+
+
+def test_file_without_pins_loads(tmp_path: Path):
+    path = tmp_path / "s.json"
+    store = StateStore(path)
+    store.save(store.load().set_note("tools", "x"))
+    data = json.loads(path.read_text())
+    del data["pinned"]
+    path.write_text(json.dumps(data))
+    loaded = store.load()
+    assert loaded.pinned == []
+    assert loaded.notes == {"tools": "x"}
+    assert list(tmp_path.iterdir()) == [path]
+
+
+def test_null_pins_load(tmp_path: Path):
+    path = tmp_path / "s.json"
+    store = StateStore(path)
+    store.save(store.load())
+    data = json.loads(path.read_text())
+    data["pinned"] = None
+    path.write_text(json.dumps(data))
+    assert store.load().pinned == []
+    assert list(tmp_path.iterdir()) == [path]

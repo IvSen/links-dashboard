@@ -1,6 +1,7 @@
 import { api } from "./js/api.js";
 import { el, formatAgo, replaceChildren } from "./js/dom.js";
 import { renderHealth } from "./js/health.js";
+import { renderPinned } from "./js/pinned.js";
 import { initialPlace, noteScope, placeId, placeOf, samePlace, selectablePlaces } from "./js/places.js";
 import { renderLoadFailure, renderProject, renderProjectError, renderProjectLoading, renderSearch } from "./js/project.js";
 import { renderTree } from "./js/tree.js";
@@ -12,6 +13,7 @@ const SOURCE_NAMES = { mac: "Мак", docker: "Docker", cluster: "кластер
 
 let state = Object.freeze({ snapshot: null, receivedAt: null, selected: null, view: null, cache: {}, query: "", refreshing: false });
 let loadToken = 0;
+let pinnedToken = 0;
 let searchTimer = null;
 let noticeTimer = null;
 
@@ -86,7 +88,18 @@ async function markSeen(place, view) {
 }
 
 function projectContext() {
-  return { places: selectablePlaces(state.snapshot.tree), onPatch: patchItem, onSaveNote: saveNote };
+  return { places: selectablePlaces(state.snapshot.tree), onPatch: patchItem, onSaveNote: saveNote, onPin: setPin };
+}
+
+async function loadPinned() {
+  const token = ++pinnedToken;
+  try {
+    const { items } = await api.pinned();
+    if (token !== pinnedToken) return;
+    renderPinned(items, { mode: "pinned", places: [], onPin: setPin });
+  } catch (error) {
+    notify(`Не удалось загрузить закреплённое: ${error.message}`);
+  }
 }
 
 async function loadGroup(place) {
@@ -114,7 +127,7 @@ function selectGroup(place) {
 
 async function reloadAfterWrite() {
   applySnapshot(await api.snapshot(), false);
-  await loadGroup(state.selected);
+  await Promise.all([loadGroup(state.selected), loadPinned()]);
 }
 
 async function write(action, failure) {
@@ -132,6 +145,14 @@ function patchItem(key, patch) {
     await api.patchItem(key, patch);
     await reloadAfterWrite();
   }, "Не удалось сохранить адрес");
+}
+
+function setPin(key, pinned) {
+  return write(async () => {
+    await api.pin(key, pinned);
+    await reloadAfterWrite();
+    if (state.query) await runSearch(state.query);
+  }, pinned ? "Не удалось закрепить адрес" : "Не удалось открепить адрес");
 }
 
 function withNote(place, text) {
@@ -185,7 +206,7 @@ async function refresh() {
     const selected = initialPlace(snapshot.tree, state.selected || recalled());
     setState({ selected });
     applySnapshot(snapshot, true);
-    await loadGroup(selected);
+    await Promise.all([loadGroup(selected), loadPinned()]);
     if (state.query) await runSearch(state.query);
   } catch (error) {
     if (state.snapshot) notify(`Не удалось обновить: ${error.message}`);

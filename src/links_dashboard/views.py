@@ -47,6 +47,7 @@ class ItemView:
     is_new: bool
     cached: bool
     details: dict[str, str] = field(default_factory=dict)
+    pinned: bool = False
 
 
 @dataclass(frozen=True)
@@ -95,11 +96,11 @@ def kept_entries(state: State, source: str, present: set[str]) -> list[Entry]:
 
 
 def with_missing(entries: list[Entry], state: State) -> list[Entry]:
-    """Add remembered items that carry an owner override but are gone from every source."""
+    """Add remembered items that carry an owner edit (override or pin) but are gone from every source."""
     present = {entry.endpoint.key for entry in entries}
     restored = [
         restore_endpoint(key, state.known[key])
-        for key in state.overrides
+        for key in dict.fromkeys([*state.overrides, *state.pinned])
         if key not in present and key in state.known
     ]
     missing = [Entry(endpoint, forced_status="missing") for endpoint in restored if endpoint is not None]
@@ -154,11 +155,17 @@ def item_view(entry: Entry, state: State, status: str) -> ItemView:
         is_new=endpoint.key not in state.seen,
         cached=entry.cached,
         details=dict(endpoint.details),
+        pinned=endpoint.key in state.pinned,
     )
 
 
 def sorted_items(items: list[ItemView]) -> list[ItemView]:
     return sorted(items, key=lambda item: (STATUS_ORDER.index(item.status), item.label))
+
+
+def pinned_order(items: list[ItemView]) -> list[ItemView]:
+    """Answering items first; within one status the owner's pin order is kept."""
+    return sorted(items, key=lambda item: STATUS_ORDER.index(item.status))
 
 
 def snapshot_payload(snapshot: Any, purposes: dict[str, str]) -> dict[str, Any]:

@@ -17,6 +17,7 @@ from links_dashboard.views import (
     NO_GROUP,
     Entry,
     GroupView,
+    ItemView,
     TreeNode,
     build_tree,
     entry_place,
@@ -24,6 +25,7 @@ from links_dashboard.views import (
     item_view,
     kept_entries,
     note_scope,
+    pinned_order,
     sorted_items,
     with_missing,
 )
@@ -105,12 +107,7 @@ class DashboardService:
         wanted = (group, subgroup or None) if group else (NO_GROUP, None)
         placed = [e for e in with_missing(discovery.entries, state) if entry_place(e, state) == wanted]
         visible = [entry for entry in placed if not is_hidden(entry, state)]
-        targets = {e.endpoint.key: e.endpoint.check for e in visible if e.forced_status is None}
-        statuses = await self._checker(targets)
-        items = [
-            item_view(entry, state, entry.forced_status or statuses.get(entry.endpoint.key, "down"))
-            for entry in visible
-        ]
+        items = await self._checked_views(visible, state)
         hidden = [
             item_view(entry, state, entry.forced_status or "na")
             for entry in placed
@@ -124,6 +121,33 @@ class DashboardService:
             hidden=sorted_items(hidden),
         )
 
+    async def pinned_view(self) -> list[ItemView]:
+        if self._discovery is None:
+            await self.refresh()
+        state = self._current_state()
+        by_key = {entry.endpoint.key: entry for entry in with_missing(self._discovery.entries, state)}
+        pinned = [by_key[key] for key in state.pinned if key in by_key and not is_hidden(by_key[key], state)]
+        return pinned_order(await self._checked_views(pinned, state))
+
+    async def set_pinned(self, key: str, pinned: bool) -> None:
+        def change(state: State) -> State:
+            if key not in state.known:
+                raise UnknownItem(key)
+            override = state.overrides.get(key)
+            if pinned and override is not None and override.hidden:
+                return state
+            return state.set_pinned(key, pinned)
+
+        await self._mutate(change)
+
+    async def _checked_views(self, entries: list[Entry], state: State) -> list[ItemView]:
+        targets = {e.endpoint.key: e.endpoint.check for e in entries if e.forced_status is None}
+        statuses = await self._checker(targets)
+        return [
+            item_view(entry, state, entry.forced_status or statuses.get(entry.endpoint.key, "down"))
+            for entry in entries
+        ]
+
     async def update_item(self, key: str, patch: dict[str, Any]) -> None:
         unknown = sorted(set(patch) - PATCH_FIELDS)
         if unknown:
@@ -132,7 +156,8 @@ class DashboardService:
         def change(state: State) -> State:
             if key not in state.known:
                 raise UnknownItem(key)
-            return state.set_override(key, **patch)
+            updated = state.set_override(key, **patch)
+            return updated.set_pinned(key, False) if patch.get("hidden") else updated
 
         await self._mutate(change)
 

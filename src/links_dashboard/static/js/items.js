@@ -41,9 +41,16 @@ async function copyText(value) {
   legacyCopy(value);
 }
 
-function copyButton(item) {
-  const value = item.kind === "web" && item.url ? item.url : item.details.address || item.label;
-  const button = el("button", { type: "button", class: "link-button", text: "копировать", title: `Скопировать ${value}` });
+function hostOf(url) {
+  try {
+    return new URL(url).host || url;
+  } catch {
+    return url;
+  }
+}
+
+function copyAction(value, label) {
+  const button = el("button", { type: "button", class: "link-button", text: label, title: `Скопировать ${value}` });
   button.addEventListener("click", async () => {
     try {
       await copyText(value);
@@ -51,9 +58,19 @@ function copyButton(item) {
     } catch {
       button.textContent = "не удалось";
     }
-    setTimeout(() => { button.textContent = "копировать"; }, COPIED_MS);
+    setTimeout(() => { button.textContent = label; }, COPIED_MS);
   });
   return button;
+}
+
+function copyButton(item) {
+  if (item.kind === "web" && item.url) return copyAction(hostOf(item.url), "копировать хост");
+  return copyAction(item.details.address || item.label, "копировать");
+}
+
+function pinButton(item, ctx) {
+  const label = item.pinned ? "открепить" : "закрепить";
+  return el("button", { type: "button", class: "link-button", text: label, onclick: () => ctx.onPin(item.key, !item.pinned) });
 }
 
 function address(item) {
@@ -66,8 +83,14 @@ function statusNote(item) {
   return el("span", { class: `item__status item__status--${item.status}`, text: STATUS[item.status].text });
 }
 
-function badges(item) {
+function placeTag(item) {
+  return el("span", { class: "tag tag--place", text: placeLabel(placeOf(item.group, item.subgroup)) });
+}
+
+function badges(item, ctx) {
+  if (ctx.mode === "pinned") return [placeTag(item)];
   return [
+    item.pinned ? el("span", { class: "pin-mark", text: "📌", title: "закреплено", role: "img", "aria-label": "закреплено" }) : null,
     item.is_new ? el("span", { class: "badge badge--new", text: "новое" }) : null,
     item.login_hint ? el("span", { class: "tag tag--hint", text: item.login_hint }) : null,
     el("span", { class: "tag tag--source", text: sourceText(item) }),
@@ -148,7 +171,8 @@ function editForm(item, ctx, close) {
 }
 
 function actions(item, ctx, row) {
-  if (ctx.mode === "search") return [item.kind === "conn" ? copyButton(item) : null];
+  if (ctx.mode === "search") return [copyButton(item)];
+  if (ctx.mode === "pinned") return [copyButton(item), pinButton(item, ctx)];
   if (ctx.mode === "hidden") {
     return [el("button", { type: "button", class: "link-button", text: "вернуть", onclick: () => ctx.onPatch(item.key, { hidden: false }) })];
   }
@@ -156,7 +180,8 @@ function actions(item, ctx, row) {
   const close = () => replaceChildren(slot);
   return [
     !item.group ? moveSelect(item, ctx) : null,
-    item.kind === "conn" ? copyButton(item) : null,
+    copyButton(item),
+    pinButton(item, ctx),
     el("button", { type: "button", class: "link-button", text: "изменить", onclick: () => replaceChildren(slot, editForm(item, ctx, close)) }),
     el("button", { type: "button", class: "link-button", text: "скрыть", onclick: () => ctx.onPatch(item.key, { hidden: true }) }),
   ];
@@ -173,7 +198,7 @@ export function itemRow(item, ctx) {
     el(
       "div",
       { class: "item__main" },
-      el("div", { class: "item__head" }, item.title ? el("span", { class: "item__title", text: item.title }) : null, address(item), statusNote(item), badges(item)),
+      el("div", { class: "item__head" }, item.title ? el("span", { class: "item__title", text: item.title }) : null, address(item), statusNote(item), badges(item, ctx)),
       item.description ? el("div", { class: "item__desc", text: item.description }) : null,
     ),
   );
