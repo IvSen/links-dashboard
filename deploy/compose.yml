@@ -1,0 +1,21 @@
+services:
+  links-dashboard:
+    container_name: links-dashboard
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: links-dashboard:latest
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /home/ivan/build/edge-proxy/nginx.conf:/config/edge-nginx.conf:ro
+      - /home/ivan/.config/links-dashboard:/data
+    environment:
+      LD_STATE: /data/state.json
+      LD_EDGE_CONF: /config/edge-nginx.conf
+      LD_KUBECONFIG: /data/kubeconfig
+      LD_MAC_HOST: 10.0.100.243
+      LD_MAC_USER: i.senishin
+      LD_MAC_KEY: /data/mac_key
+      LD_PORT: "8099"

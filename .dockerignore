@@ -1,0 +1,10 @@
+.venv
+.superpowers
+.git
+.pytest_cache
+tests
+docs
+mac
+deploy
+**/__pycache__
+*.pyc
