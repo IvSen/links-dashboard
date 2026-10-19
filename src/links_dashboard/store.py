@@ -85,11 +85,9 @@ class StateStore:
 
     def load(self) -> State:
         try:
-            raw = self._path.read_text(encoding="utf-8")
+            return state_from_json(json.loads(self._path.read_text(encoding="utf-8")))
         except FileNotFoundError:
             return State()
-        try:
-            return state_from_json(json.loads(raw))
         except (ValueError, KeyError, TypeError, AttributeError):
             self._set_corrupt_aside()
             return State()

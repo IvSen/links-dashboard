@@ -113,3 +113,16 @@ def test_corrupt_file_is_kept_aside(tmp_path: Path):
     aside = list(tmp_path.glob("s.json.corrupt-*"))
     assert len(aside) == 1
     assert aside[0].read_text(encoding="utf-8") == "{broken"
+
+
+def test_non_utf8_file_is_kept_aside(tmp_path: Path):
+    path = tmp_path / "s.json"
+    path.write_bytes(b"\xff\xfe\x00")
+
+    state = StateStore(path).load()
+
+    assert state.groups == INITIAL_GROUPS
+    assert not path.exists()
+    aside = list(tmp_path.glob("s.json.corrupt-*"))
+    assert len(aside) == 1
+    assert aside[0].read_bytes() == b"\xff\xfe\x00"
