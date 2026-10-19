@@ -15,11 +15,19 @@ def _response(status: int) -> bytes:
 
 @asynccontextmanager
 async def serve(handler, ssl_context=None):
-    server = await asyncio.start_server(handler, "127.0.0.1", 0, ssl=ssl_context)
+    writers: list[asyncio.StreamWriter] = []
+
+    async def tracked(reader, writer):
+        writers.append(writer)
+        await handler(reader, writer)
+
+    server = await asyncio.start_server(tracked, "127.0.0.1", 0, ssl=ssl_context)
     try:
         yield server.sockets[0].getsockname()[1]
     finally:
         server.close()
+        for writer in writers:
+            writer.close()
         await server.wait_closed()
 
 
@@ -36,8 +44,10 @@ def status_handler(status: int, seen: list[bytes] | None = None):
 
 
 async def silent_handler(reader, writer):
-    await asyncio.sleep(5)
-    writer.close()
+    try:
+        await reader.read()
+    finally:
+        writer.close()
 
 
 def web(port: int, server_name: str | None = None) -> CheckTarget:
@@ -148,3 +158,16 @@ async def test_check_many_bounds_concurrency():
         result = await check_many(targets, limit=2)
     assert set(result.values()) == {"up"}
     assert peak <= 2
+
+
+async def test_check_many_isolates_errors():
+    async def handler(reader, writer):
+        writer.close()
+
+    async with serve(handler) as port:
+        targets = {
+            "good": CheckTarget("tcp", "127.0.0.1", port, None),
+            "bad": CheckTarget("tcp", "127.0.0.1", 70000, None),
+            "bad_web": CheckTarget("http", "127.0.0.1", 70000, None),
+        }
+        assert await check_many(targets) == {"good": "up", "bad": "down", "bad_web": "down"}

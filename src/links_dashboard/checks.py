@@ -56,7 +56,10 @@ async def check_many(targets: dict[str, CheckTarget], limit: int = 20) -> dict[s
 
     async def run(target: CheckTarget) -> Status:
         async with semaphore:
-            return await check(target)
+            try:
+                return await check(target)
+            except Exception:
+                return "down"
 
     results = await asyncio.gather(*(run(target) for target in targets.values()))
     return dict(zip(targets.keys(), results))

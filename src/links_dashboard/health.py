@@ -85,16 +85,15 @@ def _laptop_tile(laptop: LaptopInfo | None) -> Tile:
     title = "Ноутбук"
     if laptop is None:
         return Tile("laptop", title, "нет данных", "источник недоступен", True)
+    kind = "kind запущен" if laptop.kind_running else "kind остановлен"
     problems = []
     if not laptop.vpn:
         problems.append("VPN выключен")
     if laptop.docker_version is None:
         problems.append("Docker недоступен")
-    if not laptop.kind_running:
-        problems.append("кластер kind остановлен")
     if problems:
-        return Tile("laptop", title, "проблемы", ", ".join(problems), True)
-    return Tile("laptop", title, "в порядке", f"Docker {laptop.docker_version}, VPN, kind", False)
+        return Tile("laptop", title, "проблемы", ", ".join([*problems, kind]), True)
+    return Tile("laptop", title, "в порядке", f"Docker {laptop.docker_version} · VPN · {kind}", False)
 
 
 def _collect_errors(mac: MacInfo | None, mac_error: str | None) -> dict[str, str]:

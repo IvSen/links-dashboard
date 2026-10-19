@@ -85,6 +85,9 @@ def test_laptop_tile():
     off = LaptopInfo(vpn=False, docker_version=None, kind_running=False)
     health = build_health(MacInfo(), None, CONTAINER, EDGE, off, {})
     assert health.tiles[3].bad is True
+    assert health.tiles[3].sub.endswith("kind остановлен")
+    assert health.tiles[3].sub.startswith("VPN выключен")
+    assert health.tiles[3].sub != "kind остановлен"
     assert build_health(MacInfo(), None, CONTAINER, EDGE, None, {}).tiles[3].bad is True
 
 
@@ -92,3 +95,22 @@ def test_mac_errors_propagate():
     mac = MacInfo(errors={"mutagen": "no output"})
     health = build_health(mac, None, CONTAINER, EDGE, LAPTOP, {})
     assert health.errors["mutagen"] == "no output"
+
+
+def test_laptop_tile_kind_stopped_not_bad():
+    laptop = LaptopInfo(vpn=True, docker_version="29.9.1", kind_running=False)
+    tile = build_health(MacInfo(), None, CONTAINER, EDGE, laptop, {}).tiles[3]
+    assert tile.bad is False
+    assert tile.sub == "Docker 29.9.1 · VPN · kind остановлен"
+
+
+def test_laptop_tile_healthy_sub_from_facts():
+    laptop = LaptopInfo(vpn=True, docker_version="29.9.1", kind_running=True)
+    tile = build_health(MacInfo(), None, CONTAINER, EDGE, laptop, {}).tiles[3]
+    assert tile.bad is False
+    assert tile.sub == "Docker 29.9.1 · VPN · kind запущен"
+
+
+def test_laptop_tile_vpn_off_is_bad():
+    laptop = LaptopInfo(vpn=False, docker_version="29.9.1", kind_running=True)
+    assert build_health(MacInfo(), None, CONTAINER, EDGE, laptop, {}).tiles[3].bad is True
