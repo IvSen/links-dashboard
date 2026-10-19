@@ -1,0 +1,183 @@
+<style>
+  .dash{font-size:13px;line-height:1.4;box-sizing:border-box}
+  .dash *{box-sizing:border-box}
+  .page{width:100%;max-width:1100px;margin:0 auto}
+  .topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid rgba(127,127,127,.3);margin-bottom:10px}
+  .topbar b{font-size:15px}
+  .muted{font-size:12px;opacity:.6}
+  .btn{font-size:12px;border:1px solid rgba(127,127,127,.5);border-radius:5px;padding:2px 10px}
+  .grow{flex:1 1 140px;min-width:0}
+  .search{display:block;font-size:12px;border:1px solid rgba(127,127,127,.4);border-radius:5px;padding:2px 8px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .health{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:8px;margin-bottom:8px}
+  .hc{border:1px solid rgba(127,127,127,.3);border-radius:8px;padding:7px 9px;min-width:0}
+  .hc .t{font-size:10px;text-transform:uppercase;letter-spacing:.05em;opacity:.6}
+  .hc .v{font-size:14px;font-weight:600}
+  .hc .s{font-size:12px;opacity:.75;overflow-wrap:anywhere}
+  .bad{border-color:#c94a4a}.bad .v{color:#c94a4a}
+  details.more{border:1px solid rgba(127,127,127,.3);border-radius:8px;padding:6px 10px;margin-bottom:12px}
+  details.more summary{cursor:pointer;font-size:12px;opacity:.8}
+  .tw{overflow-x:auto;margin:6px 0 10px}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th{text-align:left;font-weight:600;opacity:.65;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid rgba(127,127,127,.3);padding:3px 6px;white-space:nowrap}
+  td{padding:3px 6px;border-bottom:1px solid rgba(127,127,127,.12);vertical-align:top}
+  td.mono{font-family:ui-monospace,monospace;white-space:nowrap}
+  .ok{color:#22a35a}.err{color:#c94a4a}.mid{color:#c97828}
+  .layout{display:grid;grid-template-columns:170px minmax(0,1fr);gap:14px}
+  .tree{border-right:1px solid rgba(127,127,127,.25);padding-right:10px;min-width:0}
+  .tree div{padding:2px 0}
+  .tree .act{font-weight:600;background:rgba(59,130,246,.12);border-radius:4px;padding:2px 4px}
+  .count{opacity:.6;font-size:11px}
+  .newb{font-size:10px;background:#3b82f6;color:#fff;border-radius:8px;padding:0 6px;margin-left:4px;white-space:nowrap}
+  .proj{border:1px solid rgba(127,127,127,.3);border-radius:8px;padding:10px 12px;min-width:0}
+  .proj h4{margin:0 0 4px;font-size:15px}
+  .meta{font-size:12px;opacity:.85;display:flex;gap:4px 16px;flex-wrap:wrap;margin-bottom:8px}
+  .meta code{font-size:12px;overflow-wrap:anywhere}
+  .warn{color:#c97828}
+  .notes{border:1px solid rgba(127,127,127,.3);border-radius:6px;padding:8px 10px;background:rgba(127,127,127,.06);font-size:12px;white-space:pre-line;position:relative;overflow-wrap:anywhere}
+  .notes .edit{float:right;font-size:11px;opacity:.6}
+  .h6{font-size:11px;text-transform:uppercase;letter-spacing:.05em;opacity:.6;margin:12px 0 3px}
+  .row{display:flex;gap:4px 8px;align-items:baseline;flex-wrap:wrap;padding:3px 6px;border-radius:5px;min-width:0}
+  .row:hover{background:rgba(127,127,127,.1)}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;transform:translateY(-1px)}
+  .on{background:#22a35a}.off{background:#c94a4a}.na{background:#999}
+  a.url,.conn{font-family:ui-monospace,monospace;overflow-wrap:anywhere;min-width:0}
+  a.url{color:#3b82f6;text-decoration:underline}
+  .conn{font-size:12px}
+  .desc{opacity:.65;font-size:12px}
+  .hint,.src{font-size:10px;border-radius:4px;padding:0 4px;white-space:nowrap}
+  .hint{opacity:.75;border:1px solid rgba(127,127,127,.35)}
+  .src{opacity:.55;border:1px dotted rgba(127,127,127,.6)}
+  .dim{opacity:.5}
+  .act-r{margin-left:auto;display:flex;gap:8px;font-size:11px;opacity:.6}
+  .narrow{max-width:340px;margin:0 auto}
+  @media (max-width:700px){.layout{grid-template-columns:1fr}.tree{border-right:0;padding-right:0}}
+</style>
+
+<h2>Финальный вид, версия 4</h2>
+<p class="subtitle">Вёрстка не вылезает за экран: длинные адреса переносятся, таблицы прокручиваются внутри себя. Под плитками раскрывается подробное состояние. Ниже тот же экран на телефоне.</p>
+
+<div class="mockup">
+  <div class="mockup-header">links.test</div>
+  <div class="mockup-body dash">
+    <div class="page">
+      <div class="topbar">
+        <b>winbox</b><span class="muted">проверено 40 сек назад</span>
+        <span class="grow"><span class="search">поиск по адресам и описаниям</span></span>
+        <span class="btn">Обновить</span>
+      </div>
+
+      <div class="health">
+        <div class="hc"><div class="t">Синхронизация</div><div class="v">4 из 4 в порядке</div><div class="s">конфликтов нет</div></div>
+        <div class="hc bad"><div class="t">Пробросы</div><div class="v">12 из 13</div><div class="s">упал kind-api</div></div>
+        <div class="hc"><div class="t">edge-proxy</div><div class="v">работает</div><div class="s">2 дня</div></div>
+        <div class="hc"><div class="t">Ноутбук</div><div class="v">SSH · VPN ok</div><div class="s">кластер запущен</div></div>
+      </div>
+
+      <details class="more" open>
+        <summary>Подробное состояние</summary>
+
+        <div class="h6">Синхронизация Mutagen</div>
+        <div class="tw"><table>
+          <tr><th>Сессия</th><th>Статус</th><th>Папка на Маке</th><th>Файлы</th><th>Конфликты</th><th>Проблемы</th></tr>
+          <tr><td>kvs</td><td class="ok">следит за изменениями</td><td class="mono">~/project/cd_traffic/kvs</td><td>22 077 · 994 MB</td><td>0</td><td>0</td></tr>
+          <tr><td>mp4k-v2</td><td class="ok">следит за изменениями</td><td class="mono">~/project/cd_traffic/mp4k_v2</td><td>11 146 · 77 MB</td><td>0</td><td>0</td></tr>
+          <tr><td>content-panel</td><td class="mid">передаёт файлы, 63%</td><td class="mono">~/project/cd_traffic/content-panel</td><td>7 807 · 3.5 GB</td><td>0</td><td>0</td></tr>
+          <tr><td>carbox</td><td class="ok">следит за изменениями</td><td class="mono">~/project/carbox</td><td>110 349 · 4.3 GB</td><td>0</td><td>0</td></tr>
+        </table></div>
+
+        <div class="h6">Пробросы портов</div>
+        <div class="tw"><table>
+          <tr><th>Имя</th><th>Статус</th><th>На Маке</th><th>На ноутбуке</th><th>Соединений</th><th>Для чего</th></tr>
+          <tr><td>edge-https</td><td class="ok">работает</td><td class="mono">:443</td><td class="mono">127.0.0.1:10443</td><td>6</td><td>сайты по HTTPS через edge</td></tr>
+          <tr><td>edge-http</td><td class="ok">работает</td><td class="mono">:80</td><td class="mono">127.0.0.1:10080</td><td>0</td><td>сайты по HTTP через edge</td></tr>
+          <tr><td>kvs-mysql</td><td class="ok">работает</td><td class="mono">127.0.0.1:3310</td><td class="mono">127.0.0.1:3310</td><td>1</td><td>MySQL kvs</td></tr>
+          <tr><td>kind-api</td><td class="err">не подключён</td><td class="mono">127.0.0.1:64565</td><td class="mono">127.0.0.1:64565</td><td>0</td><td>kubectl и helm</td></tr>
+          <tr><td>xdebug</td><td class="ok">работает</td><td class="mono">127.0.0.1:9003</td><td class="mono">ноутбук :9003 → Мак</td><td>0</td><td>обратный, для PhpStorm</td></tr>
+          <tr><td colspan="6" class="muted">ещё 8 пробросов...</td></tr>
+        </table></div>
+
+        <div class="h6">edge-proxy</div>
+        <div class="tw"><table>
+          <tr><th>Контейнер</th><th>Статус</th><th>Слушает</th><th>Маршруты</th></tr>
+          <tr><td>edge-proxy</td><td class="ok">работает 2 дня</td><td class="mono">10080, 10443</td><td>*.local.rf-tech.ru → кластер; beszel.test, netdata.test, links.test → свои; остальное → kvs</td></tr>
+        </table></div>
+      </details>
+
+      <div class="layout">
+        <div class="tree">
+          <div style="color:#c97828">Без группы <span class="count">1</span><span class="newb">1</span></div>
+          <div>tools <span class="count">4</span></div>
+          <div>cd_traffic <span class="count">19</span><span class="newb">2</span></div>
+          <div style="padding-left:10px" class="act">kvs <span class="count">14</span><span class="newb">2</span></div>
+          <div style="padding-left:10px">mp4k_v2 <span class="count">4</span></div>
+          <div style="padding-left:10px">content-panel <span class="count">1</span></div>
+          <div>carbox <span class="count">6</span></div>
+          <div style="padding-left:10px">rosfines-dev <span class="count">6</span></div>
+          <div>etc <span class="count">0</span></div>
+          <div style="opacity:.55;margin-top:8px;font-size:12px">+ группа / подгруппа</div>
+        </div>
+
+        <div class="proj">
+          <h4>kvs</h4>
+          <div class="meta">
+            <span>папка <code>~/project/cd_traffic/kvs</code></span>
+            <span>ветка <code>ivsen/sidebar-upgrade-css</code></span>
+            <span class="warn">контейнеры 3 из 4 · остановлен kvs-redis</span>
+          </div>
+          <div class="notes"><span class="edit">изменить</span>Тестовые пользователи:
+member: test@vip4k.local / test123
+admin: admin / admin</div>
+
+          <div class="h6">Открыть в браузере</div>
+          <div class="row"><span class="dot on"></span><a class="url">https://vip4k.com.local</a><span class="desc">главный сайт</span><span class="src">hosts Мака</span><span class="act-r">изменить</span></div>
+          <div class="row"><span class="dot on"></span><a class="url">https://admin.vip4k.com.local</a><span class="desc">админка</span><span class="hint">логин в заметке</span><span class="act-r">изменить</span></div>
+          <div class="row"><span class="dot on"></span><a class="url">https://tutor4k.com.local</a><span class="newb">новое</span><span class="act-r">изменить</span></div>
+          <div class="row dim"><span class="dot off"></span><a class="url">https://bufu.xxx.local</a><span class="desc">не отвечает</span><span class="act-r">изменить</span></div>
+
+          <div class="h6">Подключения</div>
+          <div class="row"><span class="dot on"></span><span class="conn">MySQL 127.0.0.1:3310 · user db · db ksv_paysite</span><span class="src">контейнер kvs-mysql</span><span class="act-r">копировать · изменить</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .phone{width:360px;max-width:100%;margin:0 auto;border:1px solid rgba(127,127,127,.45);border-radius:18px;padding:10px 10px 14px}
+  .phone .health{grid-template-columns:1fr 1fr}
+  .phone .sel{display:block;font-size:12px;border:1px solid rgba(127,127,127,.45);border-radius:6px;padding:5px 8px;margin:8px 0}
+  .phone .card{border:1px solid rgba(127,127,127,.3);border-radius:8px;padding:8px;margin-top:6px}
+  .phone .kv{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0;border-bottom:1px solid rgba(127,127,127,.12)}
+</style>
+<div class="mockup">
+  <div class="mockup-header">links.test на телефоне (или в окне шириной с телефон)</div>
+  <div class="mockup-body dash">
+    <div class="phone">
+      <div class="topbar" style="margin-bottom:6px"><b>winbox</b><span class="muted">40 сек назад</span><span class="btn" style="margin-left:auto">Обновить</span></div>
+      <span class="search">поиск по адресам и описаниям</span>
+      <div class="health" style="margin-top:8px">
+        <div class="hc"><div class="t">Синхронизация</div><div class="v">4 / 4</div></div>
+        <div class="hc bad"><div class="t">Пробросы</div><div class="v">12 / 13</div></div>
+        <div class="hc"><div class="t">edge-proxy</div><div class="v">ok</div></div>
+        <div class="hc"><div class="t">Ноутбук</div><div class="v">ok</div></div>
+      </div>
+      <details class="more"><summary>Подробное состояние</summary>
+        <div class="card"><b>kvs</b> <span class="ok">следит</span><div class="kv"><span>файлы</span><span>22 077 · 994 MB</span></div><div class="kv"><span>конфликты</span><span>0</span></div></div>
+        <div class="card"><b>kind-api</b> <span class="err">не подключён</span><div class="kv"><span>Мак</span><span class="mono">127.0.0.1:64565</span></div></div>
+      </details>
+      <span class="sel">Группа: cd_traffic / kvs ▾ <span class="newb">2 новых</span></span>
+      <div class="proj">
+        <h4>kvs</h4>
+        <div class="meta"><span>ветка <code>ivsen/sidebar-upgrade-css</code></span><span class="warn">контейнеры 3 из 4</span></div>
+        <div class="notes"><span class="edit">изменить</span>admin / admin</div>
+        <div class="h6">Открыть в браузере</div>
+        <div class="row"><span class="dot on"></span><a class="url">https://vip4k.com.local</a><span class="act-r">изменить</span></div>
+        <div class="row"><span class="dot on"></span><a class="url">https://admin.vip4k.com.local</a><span class="act-r">изменить</span></div>
+        <div class="row"><span class="dot on"></span><a class="url">https://tutor4k.com.local</a><span class="newb">новое</span></div>
+        <div class="row dim"><span class="dot off"></span><a class="url">https://bufu.xxx.local</a></div>
+        <div class="h6">Подключения</div>
+        <div class="row"><span class="dot on"></span><span class="conn">MySQL 127.0.0.1:3310 · db</span><span class="act-r">копировать</span></div>
+      </div>
+    </div>
+  </div>
+</div>
