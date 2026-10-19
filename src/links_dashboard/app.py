@@ -23,6 +23,7 @@ PUBLIC_HOST = "links.test"
 NAME_LIMIT = 200
 TEXT_LIMIT = 20_000
 OK = {"ok": True}
+REVALIDATE = "no-cache"
 
 
 class StrictBody(BaseModel):
@@ -79,7 +80,18 @@ def _install_error_handlers(app: FastAPI) -> None:
         return JSONResponse({"detail": "Не удалось сохранить состояние"}, status_code=500)
 
 
+def _install_revalidation(app: FastAPI) -> None:
+    @app.middleware("http")
+    async def revalidate_pages(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        response = await call_next(request)
+        path = request.url.path
+        if path == "/" or path.startswith("/static/"):
+            response.headers["Cache-Control"] = REVALIDATE
+        return response
+
+
 def _install_pages(app: FastAPI) -> None:
+    _install_revalidation(app)
     app.mount("/static", StaticFiles(directory=STATIC_DIR, check_dir=False), name="static")
 
     @app.get("/", include_in_schema=False)

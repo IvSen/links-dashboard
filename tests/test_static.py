@@ -45,3 +45,11 @@ def test_fake_app_serves_fixture_data(tmp_path, monkeypatch):
     assert any(node["subgroup"] == "kvs" and node["count"] > 0 for node in snapshot["tree"])
     assert kvs["project"]["stopped"] == ["kvs-redis"]
     assert {item["status"] for item in kvs["items"]} <= {"up", "down", "na", "missing"}
+
+
+def test_pages_and_static_revalidate(tmp_path):
+    with TestClient(create_app(_settings(tmp_path)), headers=HOST) as client:
+        responses = [client.get(path) for path in ("/", "/static/app.js", "/static/js/items.js", "/static/styles.css")]
+    for response in responses:
+        assert response.status_code == 200
+        assert "no-cache" in response.headers.get("cache-control", "")

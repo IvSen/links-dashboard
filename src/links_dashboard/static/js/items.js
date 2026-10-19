@@ -17,12 +17,36 @@ function sourceText(item) {
   return SOURCES[item.source] || item.source;
 }
 
+function legacyCopy(value) {
+  const area = el("textarea", { readonly: true, "aria-hidden": "true", class: "clipboard-buffer" }, value);
+  document.body.append(area);
+  try {
+    area.select();
+    if (!document.execCommand("copy")) throw new Error("copy command rejected");
+  } finally {
+    area.remove();
+  }
+}
+
+async function copyText(value) {
+  if (window.isSecureContext && navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return;
+    } catch {
+      legacyCopy(value);
+      return;
+    }
+  }
+  legacyCopy(value);
+}
+
 function copyButton(item) {
   const value = item.kind === "web" && item.url ? item.url : item.details.address || item.label;
   const button = el("button", { type: "button", class: "link-button", text: "копировать", title: `Скопировать ${value}` });
   button.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(value);
+      await copyText(value);
       button.textContent = "скопировано";
     } catch {
       button.textContent = "не удалось";

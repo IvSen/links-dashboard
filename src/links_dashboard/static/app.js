@@ -2,7 +2,7 @@ import { api } from "./js/api.js";
 import { el, formatAgo, replaceChildren } from "./js/dom.js";
 import { renderHealth } from "./js/health.js";
 import { initialPlace, noteScope, placeId, placeOf, samePlace, selectablePlaces } from "./js/places.js";
-import { renderProject, renderProjectError, renderProjectLoading, renderSearch } from "./js/project.js";
+import { renderLoadFailure, renderProject, renderProjectError, renderProjectLoading, renderSearch } from "./js/project.js";
 import { renderTree } from "./js/tree.js";
 
 const STORAGE_KEY = "links-dashboard.place";
@@ -134,9 +134,19 @@ function patchItem(key, patch) {
   }, "Не удалось сохранить адрес");
 }
 
+function withNote(place, text) {
+  const key = placeId(place);
+  const view = state.view ? { ...state.view, note: text } : null;
+  const cached = state.cache[key] ? { ...state.cache, [key]: { ...state.cache[key], note: text } } : state.cache;
+  return { view, cache: cached };
+}
+
 async function saveNote(text) {
-  const ok = await write(() => api.putNote(noteScope(state.selected), text), "Не удалось сохранить заметку");
-  return ok ? text : null;
+  const place = state.selected;
+  const ok = await write(() => api.putNote(noteScope(place), text), "Не удалось сохранить заметку");
+  if (!ok) return null;
+  if (samePlace(place, state.selected)) setState(withNote(place, text));
+  return text;
 }
 
 function addGroup(group, subgroup) {
@@ -162,6 +172,11 @@ function setRefreshing(refreshing) {
   tickAgo();
 }
 
+function showLoadFailure(message) {
+  renderLoadFailure(message, refresh);
+  document.getElementById("checked-ago").textContent = "не удалось проверить";
+}
+
 async function refresh() {
   if (state.refreshing) return;
   setRefreshing(true);
@@ -173,7 +188,8 @@ async function refresh() {
     await loadGroup(selected);
     if (state.query) await runSearch(state.query);
   } catch (error) {
-    notify(`Не удалось обновить: ${error.message}`);
+    if (state.snapshot) notify(`Не удалось обновить: ${error.message}`);
+    else showLoadFailure(error.message);
   } finally {
     setRefreshing(false);
   }

@@ -99,6 +99,17 @@ export function renderProjectError(place, message, onRetry) {
   );
 }
 
+export function renderLoadFailure(message, onRetry) {
+  replaceChildren(document.getElementById("tiles"));
+  replaceChildren(document.getElementById("tree-list"));
+  replaceChildren(
+    document.getElementById("project"),
+    el("h2", { class: "project__title", text: "Нет данных" }),
+    el("p", { class: "empty tone-err", text: `Не удалось проверить winbox: ${message}` }),
+    el("button", { type: "button", class: "btn btn--small", text: "Повторить", onclick: onRetry }),
+  );
+}
+
 export function renderProject(place, view, ctx) {
   const noteSlot = el("div", { class: "note-slot" });
   noteView(noteSlot, view.note || "", ctx.onSaveNote);
