@@ -8,6 +8,7 @@ from links_dashboard.config import (
     KIND_NODE,
     KNOWN_HOSTS,
     NAMESPACE_GROUPS,
+    TLS_PORTS,
     TOOL_CONTAINERS,
 )
 from links_dashboard.docker_source import PROJECT_ROOT, ContainerInfo, Port, project_of
@@ -182,7 +183,7 @@ def _conn_label(details: dict[str, str]) -> str:
 def _forwarded_endpoint(
     container: ContainerInfo, port: Port, src_port: int, proto: str | None
 ) -> Endpoint:
-    _, host_port, _, _ = port
+    _, host_port, container_port, _ = port
     group, subgroup = _container_group(container)
     common = {"source": "container", "group": group, "subgroup": subgroup, "reachable_from_mac": True}
     if proto is not None:
@@ -196,13 +197,14 @@ def _forwarded_endpoint(
             details=details,
             **common,
         )
-    url = f"http://{MAC_WEB_HOST}:{src_port}"
+    is_tls = container_port in TLS_PORTS
+    url = f"{'https' if is_tls else 'http'}://{MAC_WEB_HOST}:{src_port}"
     return Endpoint(
         key=f"web:{url}",
         kind="web",
         label=f"{MAC_WEB_HOST}:{src_port}",
         url=url,
-        check=CheckTarget("http", LOOPBACK, host_port, None),
+        check=CheckTarget("https_sni" if is_tls else "http", LOOPBACK, host_port, None),
         details={"container": container.name},
         **common,
     )

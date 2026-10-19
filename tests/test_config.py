@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from links_dashboard.config import KNOWN_HOSTS, Settings
+from links_dashboard.config import DEFAULT_DESCRIPTIONS, KNOWN_HOSTS, TLS_PORTS, Settings
 
 
 def test_defaults(monkeypatch):
@@ -26,3 +26,13 @@ def test_env_overrides(monkeypatch):
 
 def test_known_hosts():
     assert KNOWN_HOSTS == {"netdata.test": ("tools", None), "links.test": ("tools", None)}
+
+
+def test_default_description_keys():
+    assert DEFAULT_DESCRIPTIONS["web:https://localhost:9443"] == "Контейнеры и кластер в вебе"
+    assert DEFAULT_DESCRIPTIONS["web:http://localhost:19001"] == "Веб-консоль MinIO (mp4k_v2)"
+    assert "web:https://portainer.test:9443" not in DEFAULT_DESCRIPTIONS
+
+
+def test_tls_ports():
+    assert TLS_PORTS == frozenset({443, 8443, 9443})

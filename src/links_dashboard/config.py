@@ -16,10 +16,12 @@ CONN_PORTS = {
     9000: "MinIO API",
     8123: "ClickHouse",
 }
+TLS_PORTS = frozenset({443, 8443, 9443})
 DEFAULT_DESCRIPTIONS = {
-    "web:https://portainer.test:9443": "Контейнеры и кластер в вебе",
+    "web:https://localhost:9443": "Контейнеры и кластер в вебе",
     "web:http://beszel.test": "Нагрузка ноутбука и история",
     "web:http://netdata.test": "Подробные метрики по секундам",
+    "web:http://localhost:19001": "Веб-консоль MinIO (mp4k_v2)",
 }
 
 

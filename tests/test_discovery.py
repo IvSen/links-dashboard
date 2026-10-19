@@ -104,9 +104,14 @@ def test_minio_console_is_web_and_api_is_conn(endpoints):
     assert api.kind == "conn"
 
 
-def test_portainer_goes_to_tools(endpoints):
-    item = endpoints["web:http://localhost:9443"]
+def test_portainer_is_https(endpoints):
+    item = endpoints["web:https://localhost:9443"]
     assert (item.group, item.subgroup) == ("tools", None)
+    assert item.url == "https://localhost:9443"
+    assert item.check.mode == "https_sni"
+    assert item.check.port == 9443
+    assert item.check.server_name is None
+    assert "web:http://localhost:9443" not in endpoints
 
 
 def test_unforwarded_port_is_grey(hosts, containers, ingresses, edge, forwards):
